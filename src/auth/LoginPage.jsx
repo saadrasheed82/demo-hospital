@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { DEMO_CREDENTIALS } from '../data/seedStaff'
 import { isFirebaseActive } from '../firebase'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { auth } from '../firebase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -10,6 +12,8 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const { login, isDemoMode } = useAuth()
   const navigate = useNavigate()
+  const [seeding, setSeeding] = useState(false)
+  const [seedDone, setSeedDone] = useState(false)
 
   const handleFirebaseLogin = async (e) => {
     e.preventDefault()
@@ -87,6 +91,34 @@ export default function LoginPage() {
                 Login
               </button>
             </form>
+
+            {isFirebaseActive && !seedDone && (
+              <div className="mt-4 pt-4 border-t">
+                <button
+                  onClick={async () => {
+                    setSeeding(true)
+                    for (const cred of DEMO_CREDENTIALS) {
+                      try {
+                        await createUserWithEmailAndPassword(auth, cred.email, cred.password)
+                      } catch (e) {
+                        // already exists
+                      }
+                    }
+                    setSeeding(false)
+                    setSeedDone(true)
+                    alert('Demo users created! You can now log in.')
+                  }}
+                  className="w-full bg-purple-600 text-white py-2 rounded text-sm hover:bg-purple-700"
+                  disabled={seeding}
+                >
+                  {seeding ? 'Creating...' : 'Create Demo Users'}
+                </button>
+              </div>
+            )}
+
+            {seedDone && (
+              <p className="text-green-600 text-xs text-center mt-2">✅ Demo users ready</p>
+            )}
 
             {error && <p className="text-red-500 text-center text-sm mt-3">{error}</p>}
           </>
