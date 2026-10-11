@@ -1,13 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth } from '../firebase'
+import { auth, isFirebaseActive } from '../firebase'
 
 export const AuthContext = createContext()
 export const useAuth = () => useContext(AuthContext)
 
-// Demo mode: bypass Firebase auth (for local testing without real Firebase config)
-const DEMO_MODE = !import.meta.env.VITE_FIREBASE_API_KEY ||
-  import.meta.env.VITE_FIREBASE_API_KEY === 'demo-key'
+// Demo mode: no real Firebase, work offline for presentation
+const DEMO_MODE = !isFirebaseActive
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -16,20 +15,13 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (DEMO_MODE) {
-      // In demo mode, no user is logged in yet
       setLoading(false)
       return
     }
 
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser)
-      if (firebaseUser) {
-        const email = firebaseUser.email
-        const detectedRole = email.split('@')[0]
-        setRole(detectedRole)
-      } else {
-        setRole(null)
-      }
+      setRole(firebaseUser ? firebaseUser.email?.split('@')[0] : null)
       setLoading(false)
     })
     return () => unsubscribe()
@@ -37,7 +29,6 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     if (DEMO_MODE) {
-      // Demo mode: return based on email prefix
       const detectedRole = email.split('@')[0]
       const mockUser = { email, displayName: detectedRole }
       setUser(mockUser)
@@ -51,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = async () => {
-    if (!DEMO_MODE) {
+    if (!DEMO_MODE && auth) {
       await signOut(auth)
     }
     setUser(null)
