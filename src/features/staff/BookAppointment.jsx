@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { TEST_DOCTORS, TEST_PATIENTS } from '../../data/seedDoctors'
+import { TEST_DOCTORS } from '../../data/seedDoctors'
+import { TEST_PATIENTS } from '../../data/seedPatients'
 import { generateNextToken } from '../../shared/utils/tokenGenerator'
 
 export default function BookAppointment() {

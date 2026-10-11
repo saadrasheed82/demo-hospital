@@ -9,7 +9,7 @@ import DoctorDashboard from './features/doctor/DoctorDashboard'
 import DoctorHistory from './features/doctor/DoctorHistory'
 import PatientLayout from './features/patient/PatientLayout'
 import SearchDoctor from './features/patient/SearchDoctor'
-import BookAppointment from './features/patient/BookAppointment'
+import PatientBookAppointment from './features/patient/BookAppointment'
 import TrackQueue from './features/patient/TrackQueue'
 import PaymentForm from './features/patient/PaymentForm'
 import PatientHistory from './features/patient/PatientHistory'
@@ -69,7 +69,7 @@ export default function AppRoutes() {
         </ProtectedRoute>
       }>
         <Route index element={<SearchDoctor />} />
-        <Route path="book/:doctorId" element={<BookAppointment />} />
+        <Route path="book/:doctorId" element={<PatientBookAppointment />} />
         <Route path="pay/:doctorId" element={<PaymentForm />} />
         <Route path="booked" element={<TrackQueue />} />
         <Route path="history" element={<PatientHistory />} />
