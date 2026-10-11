@@ -4,6 +4,9 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import StaffLayout from './features/staff/StaffLayout'
 import LiveQueue from './features/staff/LiveQueue'
 import BookAppointment from './features/staff/BookAppointment'
+import DoctorLayout from './features/doctor/DoctorLayout'
+import DoctorDashboard from './features/doctor/DoctorDashboard'
+import DoctorHistory from './features/doctor/DoctorHistory'
 import AdminLayout from './features/admin/AdminLayout'
 import AdminDashboard from './features/admin/Dashboard'
 import DoctorsPage from './features/admin/DoctorsPage'
@@ -46,12 +49,12 @@ export default function AppRoutes() {
       {/* Doctor Routes */}
       <Route path="/doctor" element={
         <ProtectedRoute allowedRoles={['doctor']}>
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">Doctor Dashboard</h1>
-            <p className="text-gray-600 mt-2">Doctor dashboard is under development.</p>
-          </div>
+          <DoctorLayout />
         </ProtectedRoute>
-      } />
+      }>
+        <Route index element={<DoctorDashboard />} />
+        <Route path="history" element={<DoctorHistory />} />
+      </Route>
 
       {/* Patient Routes */}
       <Route path="/patient" element={
