@@ -1,6 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './auth/LoginPage'
 import { ProtectedRoute } from './auth/ProtectedRoute'
+import StaffLayout from './features/staff/StaffLayout'
+import LiveQueue from './features/staff/LiveQueue'
+import BookAppointment from './features/staff/BookAppointment'
 import AdminLayout from './features/admin/AdminLayout'
 import AdminDashboard from './features/admin/Dashboard'
 import DoctorsPage from './features/admin/DoctorsPage'
@@ -32,12 +35,13 @@ export default function AppRoutes() {
       {/* Staff Routes */}
       <Route path="/staff" element={
         <ProtectedRoute allowedRoles={['staff']}>
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">Counter Staff Dashboard</h1>
-            <p className="text-gray-600 mt-2">Staff dashboard is under development.</p>
-          </div>
+          <StaffLayout />
         </ProtectedRoute>
-      } />
+      }>
+        <Route index element={<LiveQueue />} />
+        <Route path="queue" element={<LiveQueue />} />
+        <Route path="book" element={<BookAppointment />} />
+      </Route>
 
       {/* Doctor Routes */}
       <Route path="/doctor" element={
