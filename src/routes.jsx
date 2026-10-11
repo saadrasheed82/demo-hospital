@@ -7,6 +7,12 @@ import BookAppointment from './features/staff/BookAppointment'
 import DoctorLayout from './features/doctor/DoctorLayout'
 import DoctorDashboard from './features/doctor/DoctorDashboard'
 import DoctorHistory from './features/doctor/DoctorHistory'
+import PatientLayout from './features/patient/PatientLayout'
+import SearchDoctor from './features/patient/SearchDoctor'
+import BookAppointment from './features/patient/BookAppointment'
+import TrackQueue from './features/patient/TrackQueue'
+import PaymentForm from './features/patient/PaymentForm'
+import PatientHistory from './features/patient/PatientHistory'
 import AdminLayout from './features/admin/AdminLayout'
 import AdminDashboard from './features/admin/Dashboard'
 import DoctorsPage from './features/admin/DoctorsPage'
@@ -59,12 +65,15 @@ export default function AppRoutes() {
       {/* Patient Routes */}
       <Route path="/patient" element={
         <ProtectedRoute allowedRoles={['patient']}>
-          <div className="p-6">
-            <h1 className="text-2xl font-bold">Patient Dashboard</h1>
-            <p className="text-gray-600 mt-2">Patient dashboard is under development.</p>
-          </div>
+          <PatientLayout />
         </ProtectedRoute>
-      } />
+      }>
+        <Route index element={<SearchDoctor />} />
+        <Route path="book/:doctorId" element={<BookAppointment />} />
+        <Route path="pay/:doctorId" element={<PaymentForm />} />
+        <Route path="booked" element={<TrackQueue />} />
+        <Route path="history" element={<PatientHistory />} />
+      </Route>
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" />} />
