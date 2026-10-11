@@ -1,0 +1,66 @@
+import { Routes, Route, Navigate } from 'react-router-dom'
+import LoginPage from './auth/LoginPage'
+import { ProtectedRoute } from './auth/ProtectedRoute'
+import AdminLayout from './features/admin/AdminLayout'
+import AdminDashboard from './features/admin/Dashboard'
+import DoctorsPage from './features/admin/DoctorsPage'
+import StaffPage from './features/admin/StaffPage'
+import SchedulePage from './features/admin/SchedulePage'
+import AnalyticsPage from './features/admin/AnalyticsPage'
+import ConfigPage from './features/admin/ConfigPage'
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to="/login" />} />
+
+      {/* Admin Routes */}
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles={['admin']}>
+          <AdminLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<AdminDashboard />} />
+        <Route path="doctors" element={<DoctorsPage />} />
+        <Route path="staff" element={<StaffPage />} />
+        <Route path="schedule" element={<SchedulePage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="config" element={<ConfigPage />} />
+      </Route>
+
+      {/* Staff Routes */}
+      <Route path="/staff" element={
+        <ProtectedRoute allowedRoles={['staff']}>
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Counter Staff Dashboard</h1>
+            <p className="text-gray-600 mt-2">Staff dashboard is under development.</p>
+          </div>
+        </ProtectedRoute>
+      } />
+
+      {/* Doctor Routes */}
+      <Route path="/doctor" element={
+        <ProtectedRoute allowedRoles={['doctor']}>
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Doctor Dashboard</h1>
+            <p className="text-gray-600 mt-2">Doctor dashboard is under development.</p>
+          </div>
+        </ProtectedRoute>
+      } />
+
+      {/* Patient Routes */}
+      <Route path="/patient" element={
+        <ProtectedRoute allowedRoles={['patient']}>
+          <div className="p-6">
+            <h1 className="text-2xl font-bold">Patient Dashboard</h1>
+            <p className="text-gray-600 mt-2">Patient dashboard is under development.</p>
+          </div>
+        </ProtectedRoute>
+      } />
+
+      {/* Fallback */}
+      <Route path="*" element={<Navigate to="/login" />} />
+    </Routes>
+  )
+}
