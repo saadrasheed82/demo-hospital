@@ -1,0 +1,34 @@
+[debug] [2026-10-11T11:45:27.704Z] ----------------------------------------------------------------------
+[debug] [2026-10-11T11:45:27.706Z] Command:       /Users/imac/.nvm/versions/node/v22.23.2/bin/node /Users/imac/.nvm/versions/node/v22.23.2/bin/firebase projects:list
+[debug] [2026-10-11T11:45:27.707Z] CLI Version:   15.33.0
+[debug] [2026-10-11T11:45:27.707Z] Platform:      darwin
+[debug] [2026-10-11T11:45:27.707Z] Node Version:  v22.23.2
+[debug] [2026-10-11T11:45:27.707Z] Detected Agent: claude-code_2-1-260_agent
+[debug] [2026-10-11T11:45:27.707Z] Time:          Sun Oct 11 2026 16:45:27 GMT+0500 (Pakistan Standard Time)
+[debug] [2026-10-11T11:45:27.708Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-11T11:45:27.715Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-10-11T11:45:27.716Z] > authorizing via signed-in user (flip012837@gmail.com)
+[debug] [2026-10-11T11:45:27.730Z] Checked if tokens are valid: true, expires at: 1791722682865
+[debug] [2026-10-11T11:45:27.730Z] Checked if tokens are valid: true, expires at: 1791722682865
+[debug] [2026-10-11T11:45:27.732Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects pageSize=1000
+[debug] [2026-10-11T11:45:27.760Z] *** [apiv2] error from fetch(https://firebase.googleapis.com/v1beta1/projects?pageSize=1000, {"headers":{},"method":"GET","dispatcher":{"_events":{},"_eventsCount":0},"signal":{}}): Error: Request was cancelled.
+[debug] [2026-10-11T11:45:27.760Z] Failed to make request to https://firebase.googleapis.com/v1beta1/projects?pageSize=1000
+[debug] [2026-10-11T11:45:27.765Z] FirebaseError: Failed to make request to https://firebase.googleapis.com/v1beta1/projects?pageSize=1000
+    at RetryOperation._fn (/Users/imac/.nvm/versions/node/v22.23.2/lib/node_modules/firebase-tools/lib/apiv2.js:338:31)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+[error] 
+[error] Error: Failed to list Firebase projects. See firebase-debug.log for more info.
+[debug] [2026-10-11T11:45:28.027Z] Error: EPERM: operation not permitted, open '/Users/imac/.config/configstore/firebase-tools.json.3442685534'
+    at Object.openSync (node:fs:560:18)
+    at Function.writeFileSync [as sync] (/Users/imac/.nvm/versions/node/v22.23.2/lib/node_modules/firebase-tools/node_modules/write-file-atomic/index.js:205:13)
+    at set all (/Users/imac/.nvm/versions/node/v22.23.2/lib/node_modules/firebase-tools/node_modules/configstore/index.js:61:20)
+    at Configstore.delete (/Users/imac/.nvm/versions/node/v22.23.2/lib/node_modules/firebase-tools/node_modules/configstore/index.js:101:12)
+    at process.<anonymous> (/Users/imac/.nvm/versions/node/v22.23.2/lib/node_modules/firebase-tools/lib/bin/cli.js:95:45)
+    at process.emit (node:events:531:35)
+    at process.exit (node:internal/process/per_thread:240:15)
+    at Timeout._onTimeout (/Users/imac/.nvm/versions/node/v22.23.2/lib/node_modules/firebase-tools/lib/errorOut.js:20:17)
+    at listOnTimeout (node:internal/timers:585:17)
+    at process.processTimers (node:internal/timers:521:7)
+[error] 
+[error] Error: An unexpected error has occurred.
