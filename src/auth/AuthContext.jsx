@@ -1,12 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { auth, isFirebaseActive } from '../firebase'
+import { supabase, isSupabaseActive } from '../supabase'
 
 export const AuthContext = createContext()
 export const useAuth = () => useContext(AuthContext)
-
-// Demo mode: no real Firebase, work offline for presentation
-const DEMO_MODE = !isFirebaseActive
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
@@ -14,43 +10,48 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (DEMO_MODE) {
+    if (!isSupabaseActive) {
       setLoading(false)
       return
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser)
-      setRole(firebaseUser ? firebaseUser.email?.split('@')[0] : null)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      setRole(session?.user?.email?.split('@')[0] ?? null)
       setLoading(false)
     })
-    return () => unsubscribe()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setRole(session?.user?.email?.split('@')[0] ?? null)
+      setLoading(false)
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const login = async (email, password) => {
-    if (DEMO_MODE) {
-      const detectedRole = email.split('@')[0]
-      const mockUser = { email, displayName: detectedRole }
-      setUser(mockUser)
-      setRole(detectedRole)
-      return detectedRole
-    }
-    const userCred = await signInWithEmailAndPassword(auth, email, password)
-    const detectedRole = userCred.user.email.split('@')[0]
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) throw error
+    const detectedRole = data.user.email.split('@')[0]
     setRole(detectedRole)
     return detectedRole
   }
 
+  const signup = async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) throw error
+    return data
+  }
+
   const logout = async () => {
-    if (!DEMO_MODE && auth) {
-      await signOut(auth)
-    }
+    await supabase.auth.signOut()
     setUser(null)
     setRole(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, login, logout, isDemoMode: DEMO_MODE }}>
+    <AuthContext.Provider value={{ user, role, loading, login, signup, logout, isDemoMode: !isSupabaseActive }}>
       {children}
     </AuthContext.Provider>
   )

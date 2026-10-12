@@ -1,26 +1,64 @@
-import { useState } from 'react'
-import { TEST_DOCTORS } from '../../data/seedDoctors'
-import { reorderNoShow } from '../../shared/utils/tokenGenerator'
-
-// Mock queue data for Dr. Ahmed
-const MOCK_QUEUE = [
-  { id: 't1', token: '101', patientName: 'Sarah Johnson', status: 'current', condition: 'Chest pain', age: 34 },
-  { id: 't2', token: '102', patientName: 'Ali Hassan', status: 'pending', condition: 'Routine checkup', age: 45 },
-  { id: 't3', token: '103', patientName: 'Maria Garcia', status: 'pending', condition: 'Skin rash', age: 28 },
-  { id: 't4', token: '104', patientName: 'Omar Faruk', status: 'no-show', condition: 'Joint pain', age: 67 },
-  { id: 't5', token: '105', patientName: 'Layla Ameen', status: 'pending', condition: 'Fever', age: 12 },
-]
+import { useState, useEffect } from 'react'
+import { doctorsService, tokensService } from '../../services/supabase'
 
 export default function LiveQueue() {
-  const [selectedDoctor, setSelectedDoctor] = useState('doc1')
-  const [queue, setQueue] = useState(MOCK_QUEUE)
+  const [doctors, setDoctors] = useState([])
+  const [selectedDoctor, setSelectedDoctor] = useState('')
+  const [queue, setQueue] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [error, setError] = useState(null)
 
-  const handleMoveToEnd = (tokenId) => {
-    const updated = reorderNoShow(queue, tokenId)
-    setQueue(updated)
+  useEffect(() => {
+    if (!selectedDoctor) return
+    setLoading(true)
+    const unsubscribe = tokensService.subscribe(selectedDoctor, (tokens) => {
+      const sorted = [...tokens].sort((a, b) => parseInt(a.token, 10) - parseInt(b.token, 10))
+      setQueue(sorted)
+      setLoading(false)
+    })
+    return () => unsubscribe()
+  }, [selectedDoctor])
+
+  // Loads the doctor list once; drives the selector and defaults to the first doctor.
+  useEffect(() => {
+    const unsubscribe = doctorsService.subscribe((docs) => {
+      setDoctors(docs)
+      if (docs.length) setSelectedDoctor(prev => prev || docs[0].id)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  const handleCall = async (tokenRow) => {
+    setActionLoadingId(tokenRow.id)
+    setError(null)
+    try {
+      const current = queue.find(t => t.status === 'current')
+      if (current && current.id !== tokenRow.id) {
+        await tokensService.update(current.id, { status: 'completed' })
+      }
+      await tokensService.update(tokenRow.id, { status: 'current' })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setActionLoadingId(null)
+    }
   }
 
-  const doctor = TEST_DOCTORS.find(d => d.id === selectedDoctor) || TEST_DOCTORS[0]
+  const handleMoveToEnd = async (tokenRow) => {
+    setActionLoadingId(tokenRow.id)
+    setError(null)
+    try {
+      const maxToken = queue.reduce((max, t) => Math.max(max, parseInt(t.token, 10) || 0), 100)
+      await tokensService.update(tokenRow.id, { token: String(maxToken + 1), status: 'end_of_queue' })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const doctor = doctors.find(d => d.id === selectedDoctor)
 
   return (
     <div>
@@ -31,56 +69,75 @@ export default function LiveQueue() {
           onChange={(e) => setSelectedDoctor(e.target.value)}
           className="p-2 border rounded bg-white"
         >
-          {TEST_DOCTORS.map(d => (
+          {doctors.map(d => (
             <option key={d.id} value={d.id}>{d.name} ({d.specialty})</option>
           ))}
         </select>
       </div>
 
       <p className="text-gray-600 mb-4">
-        Current doctor: <strong>{doctor.name}</strong> — Room: {doctor.room}
+        Current doctor: <strong>{doctor?.name || '—'}</strong> — Room: {doctor?.room || '—'}
       </p>
 
-      <table className="w-full border-collapse bg-white shadow rounded">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-3 text-left">Token</th>
-            <th className="p-3 text-left">Patient</th>
-            <th className="p-3 text-left">Age</th>
-            <th className="p-3 text-left">Condition</th>
-            <th className="p-3 text-left">Status</th>
-            <th className="p-3 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {queue.map(token => (
-            <tr key={token.id} className="border-t">
-              <td className="p-3 font-bold text-lg">{token.token}</td>
-              <td className="p-3">{token.patientName}</td>
-              <td className="p-3">{token.age}</td>
-              <td className="p-3">{token.condition}</td>
-              <td className="p-3">
-                <StatusBadge status={token.status} />
-              </td>
-              <td className="p-3">
-                {token.status === 'no-show' && (
-                  <button
-                    onClick={() => handleMoveToEnd(token.id)}
-                    className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-                  >
-                    Move to End
-                  </button>
-                )}
-                {token.status === 'pending' && (
-                  <button className="text-gray-600 text-sm hover:text-gray-800">
-                    Call
-                  </button>
-                )}
-              </td>
+      {error && (
+        <div className="bg-red-50 text-red-700 p-3 rounded mb-4">{error}</div>
+      )}
+
+      {loading ? (
+        <div className="p-4 text-center">
+          <p className="text-gray-500">Loading queue...</p>
+        </div>
+      ) : (
+        <table className="w-full border-collapse bg-white shadow rounded">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-3 text-left">Token</th>
+              <th className="p-3 text-left">Patient</th>
+              <th className="p-3 text-left">Age</th>
+              <th className="p-3 text-left">Condition</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {queue.map(token => (
+              <tr key={token.id} className="border-t">
+                <td className="p-3 font-bold text-lg">{token.token}</td>
+                <td className="p-3">{token.patient_name}</td>
+                <td className="p-3">{token.age}</td>
+                <td className="p-3">{token.condition}</td>
+                <td className="p-3"><StatusBadge status={token.status} /></td>
+                <td className="p-3">
+                  {token.status === 'no-show' ? (
+                    <button
+                      onClick={() => handleMoveToEnd(token)}
+                      disabled={actionLoadingId === token.id}
+                      className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                      {actionLoadingId === token.id ? 'Moving...' : 'Move to End'}
+                    </button>
+                  ) : token.status === 'pending' ? (
+                    <button
+                      onClick={() => handleCall(token)}
+                      disabled={actionLoadingId === token.id}
+                      className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:bg-gray-400"
+                    >
+                      {actionLoadingId === token.id ? 'Calling...' : 'Call'}
+                    </button>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+            {queue.length === 0 && (
+              <tr>
+                <td colSpan="6" className="p-4 text-center text-gray-500">
+                  No patients in queue for this doctor.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }
