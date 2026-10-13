@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
+import { NavLink } from 'react-router-dom'
 import { doctorsService } from '../../services/supabase'
-import { TEST_DOCTORS, TEST_SPECIALTIES } from '../../data/seedDoctors'
+import { TEST_SPECIALTIES } from '../../data/seedDoctors'
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
   const [editingDoctor, setEditingDoctor] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -19,25 +19,11 @@ export default function DoctorsPage() {
     return () => unsubscribe()
   }, [])
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete ${name}?`)) return
-    try {
-      await doctorsService.delete(id)
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  const handleSave = async (doctorData, editId = null) => {
+  const handleSave = async (doctorData, editId) => {
     setActionLoading(true)
     setError(null)
     try {
-      if (editId) {
-        await doctorsService.update(editId, doctorData)
-      } else {
-        await doctorsService.create(doctorData)
-      }
-      setShowAdd(false)
+      await doctorsService.update(editId, doctorData)
       setEditingDoctor(null)
     } catch (err) {
       setError(err.message)
@@ -58,12 +44,9 @@ export default function DoctorsPage() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Doctors Management</h1>
-        <button
-          onClick={() => { setEditingDoctor(null); setShowAdd(true) }}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          Add Doctor
-        </button>
+        <span className="text-sm text-gray-600">
+          Add or remove doctors from <NavLink to="/admin/team-logins" className="text-blue-600 hover:underline">Team Logins</NavLink>
+        </span>
       </div>
 
       {error && (
@@ -86,6 +69,7 @@ export default function DoctorsPage() {
             <th className="p-3 text-left">Fee</th>
             <th className="p-3 text-left">Room</th>
             <th className="p-3 text-left">Hours</th>
+            <th className="p-3 text-left">Login</th>
             <th className="p-3 text-left">Actions</th>
           </tr>
         </thead>
@@ -98,38 +82,39 @@ export default function DoctorsPage() {
               <td className="p-3">{doc.room}</td>
               <td className="p-3">{doc.hours}</td>
               <td className="p-3">
+                {doc.email ? (
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">✓ {doc.email}</span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">No login — claim in Team Logins</span>
+                )}
+              </td>
+              <td className="p-3">
                 <button
-                  onClick={() => { setEditingDoctor(doc); setShowAdd(true) }}
-                  className="text-blue-600 mr-2 hover:text-blue-800"
+                  onClick={() => setEditingDoctor(doc)}
+                  className="text-blue-600 hover:text-blue-800"
                 >
                   Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(doc.id, doc.name)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Delete
                 </button>
               </td>
             </tr>
           ))}
           {doctors.length === 0 && (
             <tr>
-              <td colSpan="6" className="p-4 text-center text-gray-500">
-                No doctors found. Add one to get started.
+              <td colSpan={7} className="p-4 text-center text-gray-500">
+                No doctors found. Create a doctor login on the Team Logins page to add one.
               </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      {showAdd && (
+      {editingDoctor && (
         <DoctorForm
           doctor={editingDoctor}
           specialties={TEST_SPECIALTIES}
           loading={actionLoading}
-          onClose={() => { setShowAdd(false); setEditingDoctor(null) }}
-          onSave={handleSave}
+          onClose={() => setEditingDoctor(null)}
+          onSave={(data) => handleSave(data, editingDoctor.id)}
         />
       )}
     </div>
@@ -137,35 +122,20 @@ export default function DoctorsPage() {
 }
 
 function DoctorForm({ doctor, specialties, loading, onClose, onSave }) {
-  const [name, setName] = useState(doctor?.name || '')
   const [specialty, setSpecialty] = useState(doctor?.specialty || specialties[0])
   const [fee, setFee] = useState(doctor?.fee || '')
   const [room, setRoom] = useState(doctor?.room || '')
   const [hours, setHours] = useState(doctor?.hours || '')
 
   const handleSubmit = () => {
-    if (!name.trim()) {
-      alert('Name is required')
-      return
-    }
-    onSave({ name, specialty, fee: parseInt(fee) || 0, room, hours })
+    onSave({ specialty, fee: parseInt(fee) || 0, room, hours })
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded shadow-md w-80">
-        <h2 className="text-xl font-bold mb-4">
-          {doctor ? 'Edit Doctor' : 'Add New Doctor'}
-        </h2>
+        <h2 className="text-xl font-bold mb-4">Edit {doctor.name}</h2>
         <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded"
-            required
-          />
           <select
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}

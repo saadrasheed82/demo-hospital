@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
+import { NavLink } from 'react-router-dom'
 import { staffService } from '../../services/supabase'
-import { TEST_STAFF } from '../../data/seedStaff'
 
-const ROLES = ['admin', 'staff', 'doctor', 'receptionist', 'nurse']
+const ROLES = ['staff', 'receptionist', 'nurse']
 
 export default function StaffPage() {
   const [staff, setStaff] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -21,25 +20,11 @@ export default function StaffPage() {
     return () => unsubscribe()
   }, [])
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Remove ${name} from staff?`)) return
-    try {
-      await staffService.delete(id)
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  const handleSave = async (staffData, editId = null) => {
+  const handleSave = async (staffData, editId) => {
     setActionLoading(true)
     setError(null)
     try {
-      if (editId) {
-        await staffService.update(editId, staffData)
-      } else {
-        await staffService.create(staffData)
-      }
-      setShowAdd(false)
+      await staffService.update(editId, staffData)
       setEditingStaff(null)
     } catch (err) {
       setError(err.message)
@@ -60,12 +45,9 @@ export default function StaffPage() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Staff Management</h1>
-        <button
-          onClick={() => { setEditingStaff(null); setShowAdd(true) }}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          Add Staff
-        </button>
+        <span className="text-sm text-gray-600">
+          Add or remove staff from <NavLink to="/admin/team-logins" className="text-blue-600 hover:underline">Team Logins</NavLink>
+        </span>
       </div>
 
       {error && (
@@ -106,16 +88,10 @@ export default function StaffPage() {
               </td>
               <td className="p-3">
                 <button
-                  onClick={() => { setEditingStaff(s); setShowAdd(true) }}
-                  className="text-blue-600 mr-2 hover:text-blue-800"
+                  onClick={() => setEditingStaff(s)}
+                  className="text-blue-600 hover:text-blue-800"
                 >
                   Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(s.id, s.name)}
-                  className="text-red-600 hover:text-red-800"
-                >
-                  Delete
                 </button>
               </td>
             </tr>
@@ -123,20 +99,20 @@ export default function StaffPage() {
           {staff.length === 0 && (
             <tr>
               <td colSpan="4" className="p-4 text-center text-gray-500">
-                No staff members found. Add one to get started.
+                No staff members found. Create a staff login on the Team Logins page to add one.
               </td>
             </tr>
           )}
         </tbody>
       </table>
 
-      {showAdd && (
+      {editingStaff && (
         <StaffForm
           staff={editingStaff}
           roles={ROLES}
           loading={actionLoading}
-          onClose={() => { setShowAdd(false); setEditingStaff(null) }}
-          onSave={handleSave}
+          onClose={() => setEditingStaff(null)}
+          onSave={(data) => handleSave(data, editingStaff.id)}
         />
       )}
     </div>
@@ -144,41 +120,23 @@ export default function StaffPage() {
 }
 
 function StaffForm({ staff, roles, loading, onClose, onSave }) {
-  const [name, setName] = useState(staff?.name || '')
-  const [email, setEmail] = useState(staff?.email || '')
   const [role, setRole] = useState(staff?.role || 'staff')
 
   const handleSubmit = () => {
-    if (!name.trim() || !email.trim()) {
-      alert('Name and email are required')
-      return
-    }
-    onSave({ name, email, role })
+    onSave({ role })
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded shadow-md w-80">
         <h2 className="text-xl font-bold mb-4">
-          {staff ? 'Edit Staff' : 'Add New Staff'}
+          Edit {staff.name}
         </h2>
         <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded"
-            required
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-2 border rounded"
-            required
-          />
+          <p className="text-sm text-gray-600">
+            {staff.name} · {staff.email}
+            <span className="block text-xs text-gray-400 mt-1">Name and email are managed on Team Logins.</span>
+          </p>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}

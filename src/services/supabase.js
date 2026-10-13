@@ -64,6 +64,13 @@ export const doctorsService = {
     if (error) { console.error('Error fetching doctors by specialty:', error); return [] }
     return data || []
   },
+
+  getByEmail: async (email) => {
+    if (!isSupabaseActive) return null
+    const { data, error } = await supabase.from('doctors').select('*').eq('email', String(email || '').toLowerCase()).single()
+    if (error || !data) return null
+    return data
+  },
 }
 
 // ─── STAFF ───────────────────────────────────────────────────────────────────
@@ -92,6 +99,13 @@ export const staffService = {
     const record = staff.id ? staff : { ...staff, id: makeId('staff') }
     const { data, error } = await supabase.from('staff').insert(record).select().single()
     if (error) throw error
+    return data
+  },
+
+  getByEmail: async (email) => {
+    if (!isSupabaseActive) return null
+    const { data, error } = await supabase.from('staff').select('*').eq('email', String(email || '').toLowerCase()).single()
+    if (error || !data) return null
     return data
   },
 
@@ -400,6 +414,192 @@ export const consultNotesService = {
     if (error) throw error
     return data
   },
+}
+
+// ─── USERS (logins — the single source of truth for credentials) ───────────
+// SHA-256 hex of a password.
+export const hashPassword = async (password) => {
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    throw new Error('Web Crypto is not available in this environment')
+  }
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password))
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+// In-memory demo store, used when Supabase is not configured. Seeded with the single admin login.
+const ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9' // sha256('admin123')
+const DEMO_USERS_KEY = 'hospital_demo_users'
+const seedDemoUsers = () => [
+  { id: 'usr_admin', email: 'admin@hospital.com', password_hash: ADMIN_PASSWORD_HASH, role: 'admin', name: 'Hospital Admin' },
+]
+const loadDemoUsers = () => {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(DEMO_USERS_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed) && parsed.length) return parsed
+      }
+    } catch { /* fall through to seed */ }
+  }
+  const seeded = seedDemoUsers()
+  if (typeof localStorage !== 'undefined') {
+    try { localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(seeded)) } catch { /* ignore */ }
+  }
+  return seeded
+}
+let demoUsers = loadDemoUsers()
+const persistDemoUsers = () => {
+  if (typeof localStorage !== 'undefined') {
+    try { localStorage.setItem(DEMO_USERS_KEY, JSON.stringify(demoUsers)) } catch { /* ignore */ }
+  }
+}
+
+export const usersService = {
+  getByEmail: async (email) => {
+    const normalizedEmail = String(email || '').toLowerCase()
+    if (!isSupabaseActive) {
+      return demoUsers.find((u) => u.email.toLowerCase() === normalizedEmail) || null
+    }
+    const { data, error } = await supabase.from('users').select('*').eq('email', normalizedEmail).single()
+    if (error || !data) return null
+    return data
+  },
+
+  // Returns the user row if email + password match, else null.
+  verify: async (email, password) => {
+    const hash = await hashPassword(password || '')
+    const row = await usersService.getByEmail(email)
+    if (!row || row.password_hash !== hash) return null
+    return row
+  },
+
+  list: async () => {
+    if (!isSupabaseActive) return demoUsers.map((u) => ({ ...u }))
+    const { data, error } = await supabase.from('users').select('*').order('created_at')
+    if (error) { console.error('Error fetching users:', error); return [] }
+    return data || []
+  },
+
+  create: async (account) => {
+    if (account.role === 'admin') throw new Error('Admin logins cannot be created here')
+    const record = {
+      id: account.id || makeId('usr'),
+      email: String(account.email || '').toLowerCase(),
+      password_hash: await hashPassword(account.password),
+      role: account.role,
+      name: account.name || null,
+    }
+    // The users table has no doctor_id/staff_id column: the link lives in the
+    // email shared by the login and the doctors/staff row, so nothing extra is
+    // put on the users record.
+    let linkedDoctorId = null
+    let linkedStaffId = null
+    if (account.role === 'doctor' && !account.skipDoctorRow) {
+      // A doctor login is the source of truth: also create the doctor's record.
+      if (!isSupabaseActive) throw new Error('Supabase not connected')
+      const existingDoctor = await doctorsService.getByEmail(record.email)
+      if (existingDoctor) throw new Error('A doctor with that email already exists')
+      linkedDoctorId = (await doctorsService.create({
+        name: record.name || record.email,
+        specialty: account.specialty || '',
+        fee: account.fee || 0,
+        room: account.room || '',
+        hours: account.hours || '',
+        email: record.email,
+      })).id
+    }
+    if (account.role === 'staff') {
+      if (!isSupabaseActive) throw new Error('Supabase not connected')
+      linkedStaffId = (await staffService.create({
+        name: record.name || record.email,
+        email: record.email,
+        role: 'staff',
+      })).id
+    }
+    if (!isSupabaseActive) {
+      if (demoUsers.some((u) => u.email.toLowerCase() === record.email)) {
+        throw new Error('A login with that email already exists')
+      }
+      demoUsers.push(record)
+      persistDemoUsers()
+      return { ...record }
+    }
+    try {
+      const { data, error } = await supabase.from('users').insert(record).select().single()
+      if (error) {
+        if (error.code === '23505') throw new Error('A login with that email already exists')
+        throw error
+      }
+      return data
+    } catch (err) {
+      // Compensation: undo the linked row so a failed login insert never leaves
+      // an orphaned doctor/staff record behind.
+      if (linkedDoctorId) await doctorsService.delete(linkedDoctorId).catch(() => {})
+      if (linkedStaffId) await staffService.delete(linkedStaffId).catch(() => {})
+      throw err
+    }
+  },
+
+  delete: async (id) => {
+    if (!isSupabaseActive) {
+      const index = demoUsers.findIndex((u) => u.id === id)
+      if (index === -1) throw new Error('Login not found')
+      if (demoUsers[index].role === 'admin') throw new Error('The admin login cannot be deleted')
+      const removed = demoUsers.splice(index, 1)[0]
+      persistDemoUsers()
+      return removed
+    }
+    const { data: userRow } = await supabase.from('users').select('*').eq('id', id).single()
+    if (!userRow) throw new Error('Login not found')
+    if (userRow.role === 'admin') throw new Error('The admin login cannot be deleted')
+    // Cascade: remove the underlying record before the login. FKs from
+    // schedules/tokens/consult_notes are NO ACTION, so clear those first.
+    if (userRow.role === 'doctor') {
+      const doctor = await doctorsService.getByEmail(userRow.email)
+      if (doctor) {
+        const { error: sErr } = await supabase.from('schedules').delete().eq('doctor_id', doctor.id)
+        if (sErr) throw sErr
+        const { error: tErr } = await supabase.from('tokens').delete().eq('doctor_id', doctor.id)
+        if (tErr) throw tErr
+        const { error: cErr } = await supabase.from('consult_notes').delete().eq('doctor_id', doctor.id)
+        if (cErr) throw cErr
+        await doctorsService.delete(doctor.id)
+      }
+    }
+    if (userRow.role === 'staff') {
+      const staff = await staffService.getByEmail(userRow.email)
+      if (staff) await staffService.delete(staff.id)
+    }
+    const { error } = await supabase.from('users').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  // Link a legacy doctor row (no login yet) to a new login.
+  claimDoctor: async (doctorId, email, password, extra = {}) => {
+    if (!isSupabaseActive) throw new Error('Supabase not connected')
+    const doctor = await doctorsService.get(doctorId)
+    if (!doctor) throw new Error('Doctor not found')
+    if (doctor.email) throw new Error('This doctor already has a login')
+    const normalizedEmail = String(email || '').toLowerCase()
+    if (await usersService.getByEmail(normalizedEmail)) throw new Error('A login with that email already exists')
+    const updates = { email: normalizedEmail, ...extra }
+    const claimed = await doctorsService.update(doctor.id, updates)
+    const user = await usersService.create({ role: 'doctor', email: claimed.email, name: claimed.name, password, skipDoctorRow: true })
+    return { user, doctor: claimed }
+  },
+}
+
+// Patient self-service: creates the patient record and a matching login, tied together by email.
+export const signupPatientAccount = async ({ name, email, password }) => {
+  const user = await usersService.create({ role: 'patient', email, name, password })
+  if (isSupabaseActive) {
+    const existing = await patientsService.getByEmail(user.email)
+    if (!existing) {
+      await patientsService.create({ name, email: user.email })
+    }
+  }
+  return user
 }
 
 // ─── ADMIN UTILITY: Seed Supabase with demo data ────────────────────────────

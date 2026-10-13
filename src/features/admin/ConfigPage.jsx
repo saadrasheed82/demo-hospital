@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { settingsService, seedSupabase } from '../../services/supabase'
-import { supabase, isSupabaseActive } from '../../supabase'
-import { DEMO_CREDENTIALS } from '../../data/seedStaff'
+import { isSupabaseActive } from '../../supabase'
 
 export default function ConfigPage() {
   const [status, setStatus] = useState(null)
-  const [logging, setLogging] = useState(false)
   const [seedingDb, setSeedingDb] = useState(false)
   const [hospitalInfo, setHospitalInfo] = useState({
     name: 'Saad Hospital',
@@ -29,27 +27,6 @@ export default function ConfigPage() {
     }
     loadHospitalInfo()
   }, [])
-
-  const handleSeedUsers = async () => {
-    setLogging(true)
-    setStatus(null)
-    try {
-      const results = []
-      for (const cred of DEMO_CREDENTIALS) {
-        try {
-          await supabase.auth.signUp({ email: cred.email, password: cred.password })
-          results.push({ ...cred, created: true })
-        } catch (e) {
-          results.push({ ...cred, error: e.message })
-        }
-      }
-      setStatus({ type: 'success', message: `Seeded ${results.length} Supabase Auth users`, results })
-    } catch (err) {
-      setStatus({ type: 'error', message: err.message })
-    } finally {
-      setLogging(false)
-    }
-  }
 
   const handleSeedDb = async () => {
     setSeedingDb(true)
@@ -173,23 +150,6 @@ export default function ConfigPage() {
 
       <div className="bg-white p-6 rounded shadow">
         <h2 className="text-lg font-semibold mb-4">Demo Setup</h2>
-
-        <div className="mb-6">
-          <button
-            onClick={handleSeedUsers}
-            disabled={logging || !isSupabaseActive}
-            className={`text-white px-4 py-2 rounded text-sm ${
-              logging || !isSupabaseActive
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {logging ? 'Creating...' : 'Seed Supabase Auth Users'}
-          </button>
-          <p className="text-xs text-gray-500 mt-1">
-            Creates demo user accounts (admin, staff, doctor, patient) in Supabase Authentication.
-          </p>
-        </div>
 
         <div>
           <button

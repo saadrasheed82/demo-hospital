@@ -17,6 +17,7 @@ import AdminLayout from './features/admin/AdminLayout'
 import AdminDashboard from './features/admin/Dashboard'
 import DoctorsPage from './features/admin/DoctorsPage'
 import StaffPage from './features/admin/StaffPage'
+import UsersPage from './features/admin/UsersPage'
 import SchedulePage from './features/admin/SchedulePage'
 import AnalyticsPage from './features/admin/AnalyticsPage'
 import ConfigPage from './features/admin/ConfigPage'
@@ -36,6 +37,7 @@ export default function AppRoutes() {
         <Route index element={<AdminDashboard />} />
         <Route path="doctors" element={<DoctorsPage />} />
         <Route path="staff" element={<StaffPage />} />
+        <Route path="team-logins" element={<UsersPage />} />
         <Route path="schedule" element={<SchedulePage />} />
         <Route path="analytics" element={<AnalyticsPage />} />
         <Route path="config" element={<ConfigPage />} />

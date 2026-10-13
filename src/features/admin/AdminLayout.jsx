@@ -5,6 +5,7 @@ export default function AdminLayout() {
     { path: '/admin', label: 'Dashboard' },
     { path: '/admin/doctors', label: 'Doctors' },
     { path: '/admin/staff', label: 'Staff' },
+    { path: '/admin/team-logins', label: 'Team Logins' },
     { path: '/admin/schedule', label: 'Schedule' },
     { path: '/admin/analytics', label: 'Analytics' },
     { path: '/admin/config', label: 'Config' },

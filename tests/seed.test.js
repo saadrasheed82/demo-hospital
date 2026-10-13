@@ -25,7 +25,6 @@ test('seed staff has counter staff accounts', () => {
   expect(TEST_STAFF.length).toBeGreaterThanOrEqual(1)
   TEST_STAFF.forEach(staff => {
     expect(staff).toHaveProperty('email')
-    expect(staff).toHaveProperty('password')
     expect(staff).toHaveProperty('role', 'staff')
   })
 })

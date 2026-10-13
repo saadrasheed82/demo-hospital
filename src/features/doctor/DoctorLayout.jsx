@@ -3,48 +3,52 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { doctorsService } from '../../services/supabase'
 import { TEST_DOCTORS } from '../../data/seedDoctors'
 import { isSupabaseActive } from '../../supabase'
+import { useAuth } from '../../auth/AuthContext'
 
 const DoctorContext = createContext(null)
 export const useDoctor = () => useContext(DoctorContext)
 
 export default function DoctorLayout() {
+  const { user } = useAuth()
+  const loginEmail = user?.email ? String(user.email).toLowerCase() : ''
+
   const [doctors, setDoctors] = useState([])
   const [doctorId, setDoctorId] = useState('')
 
   useEffect(() => {
     if (!isSupabaseActive) {
       setDoctors(TEST_DOCTORS)
-      setDoctorId(prev => prev || TEST_DOCTORS[0]?.id || '')
+      setDoctorId(TEST_DOCTORS[0]?.id || '')
       return undefined
     }
+    // A doctor login is tied to the doctors row with the same email. That row is
+    // created (or claimed) by the admin on Team Logins, so this lookup is exact.
     const unsubscribe = doctorsService.subscribe((docs) => {
-      const sorted = [...docs].sort((a, b) => a.id.localeCompare(b.id))
-      setDoctors(sorted)
-      setDoctorId(prev => prev && sorted.some(d => d.id === prev) ? prev : sorted[0]?.id || '')
+      const mine = docs.filter(d => (d.email || '').toLowerCase() === loginEmail)
+      setDoctors(mine)
+      setDoctorId(mine[0]?.id || '')
     })
     return unsubscribe
-  }, [])
+  }, [loginEmail])
 
   const doctor = doctors.find(d => d.id === doctorId)
 
   return (
-    <DoctorContext.Provider value={{ doctors, doctor, doctorId, setDoctorId, isDemo: !isSupabaseActive }}>
+    <DoctorContext.Provider value={{ doctor, doctorId, isDemo: !isSupabaseActive }}>
       <div className="flex min-h-screen">
         <nav className="w-64 bg-gray-800 text-white p-4 flex flex-col gap-4">
           <h2 className="font-bold text-lg">Doctor Panel</h2>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">Viewing as</label>
-            <select
-              value={doctorId}
-              onChange={(e) => setDoctorId(e.target.value)}
-              className="w-full p-2 rounded bg-gray-700 text-white"
-            >
-              {doctors.length === 0 && <option value="">No doctors</option>}
-              {doctors.map(d => (
-                <option key={d.id} value={d.id}>{d.name} ({d.specialty})</option>
-              ))}
-            </select>
-          </div>
+          {doctor ? (
+            <div className="text-sm bg-gray-700 rounded p-2">
+              <p className="font-semibold">{doctor.name}</p>
+              <p className="text-gray-300 text-xs">{doctor.specialty}</p>
+            </div>
+          ) : (
+            <div className="text-sm bg-amber-700 rounded p-2">
+              <p className="font-semibold">No doctor record linked to this login</p>
+              <p className="text-gray-100 text-xs">Ask an admin to claim the doctor on Team Logins.</p>
+            </div>
+          )}
           <NavLink
             to="/doctor"
             className="block py-2 px-2 hover:bg-gray-700 rounded"
