@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { usersService, doctorsService, staffService } from '../../services/supabase'
 import { TEST_SPECIALTIES } from '../../data/seedDoctors'
+import { Button, EmptyState, Field, Notice, PageHeader, Panel, SkeletonRows, StatusChip } from '../../components/ui'
+
+const ROLE_TONE = { staff: 'active', doctor: 'ok', admin: 'warn', patient: 'neutral' }
 
 export default function UsersPage() {
   const [accounts, setAccounts] = useState([])
@@ -14,6 +17,7 @@ export default function UsersPage() {
   const [claimForm, setClaimForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingRemoval, setPendingRemoval] = useState(null)
 
   const load = async () => {
     try {
@@ -103,17 +107,22 @@ export default function UsersPage() {
     return a.name || a.email
   }
 
+  const removalMessage = (account) => {
+    if (account.role === 'doctor') {
+      return `Removing this doctor login also deletes their record, schedules, tokens and consult notes.`
+    }
+    if (account.role === 'staff') {
+      return 'Removing this staff login also deletes their staff record.'
+    }
+    return 'This login will no longer be able to sign in.'
+  }
+
   const handleDelete = async (account) => {
-    const msg = account.role === 'doctor'
-      ? `Remove the doctor login for ${account.email}? Their record, schedules, tokens and consult notes will be deleted.`
-      : account.role === 'staff'
-        ? `Remove the staff login for ${account.email}? Their staff record will be deleted.`
-        : `Remove the login for ${account.email}?`
-    if (!window.confirm(msg)) return
     setError('')
     setBusy(true)
     try {
       await usersService.delete(account.id)
+      setPendingRemoval(null)
       await load()
     } catch (err) {
       setError(err.message)
@@ -123,7 +132,14 @@ export default function UsersPage() {
   }
 
   if (loading) {
-    return <div className="p-4 text-center"><p className="text-gray-500">Loading logins...</p></div>
+    return (
+      <div>
+        <PageHeader eyebrow="Administration" title="Team logins" />
+        <Panel title="Staff & doctor logins">
+          <SkeletonRows rows={5} />
+        </Panel>
+      </div>
+    )
   }
 
   const teamAccounts = accounts.filter((a) => a.role === 'staff' || a.role === 'doctor')
@@ -131,24 +147,20 @@ export default function UsersPage() {
   const adminAccounts = accounts.filter((a) => a.role === 'admin')
 
   const renderAccount = (a) => (
-    <tr key={a.id} className="border-b last:border-0">
-      <td className="p-2">{labelFor(a)}</td>
-      <td className="p-2">{a.email}</td>
-      <td className="p-2">
-        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-          a.role === 'staff' ? 'bg-blue-100 text-blue-700' :
-          a.role === 'doctor' ? 'bg-green-100 text-green-700' :
-          a.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-          'bg-orange-100 text-orange-700'
-        }`}>
-          {a.role}
-        </span>
-      </td>
+    <tr key={a.id}>
+      <td className="cell-strong">{labelFor(a)}</td>
+      <td className="font-mono text-xs">{a.email}</td>
+      <td><StatusChip tone={ROLE_TONE[a.role] || 'neutral'}>{a.role}</StatusChip></td>
       {a.role !== 'admin' && (
-        <td className="p-2 text-right">
-          <button onClick={() => handleDelete(a)} className="text-red-600 text-sm hover:underline">
+        <td className="text-right">
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={() => setPendingRemoval(a)}
+            disabled={busy}
+          >
             Remove
-          </button>
+          </Button>
         </td>
       )}
     </tr>
@@ -156,233 +168,301 @@ export default function UsersPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Team Logins</h1>
-      <p className="text-sm text-gray-600 mb-4">
-        Staff and doctor accounts are created and removed here only. Patients create their own login from the sign-up form on the login page.
-      </p>
+      <PageHeader
+        eyebrow="Administration"
+        title="Team logins"
+        meta="Staff and doctor accounts are created and removed here. Patients create their own login from the sign-up form."
+        actions={
+          <Button onClick={() => setShowForm(!showForm)}>
+            {showForm ? 'Cancel' : 'Create login'}
+          </Button>
+        }
+      />
 
-      {error && <div className="mb-4 bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
-
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Staff &amp; Doctor Logins</h2>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-          >
-            {showForm ? 'Cancel' : '+ Create Login'}
-          </button>
-        </div>
-
-        {showForm && (
-          <form onSubmit={handleCreate} className="mb-4 grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded">
-            <input
-              type="text"
-              placeholder="Name (e.g. Dr. Ahmed)"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              className="p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email (used for login)"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="text"
-              placeholder="Password (min. 6 characters)"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="p-2 border border-gray-300 rounded"
-              required
-              minLength={6}
-            />
-            <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="p-2 border border-gray-300 rounded bg-white"
-            >
-              <option value="staff">Staff</option>
-              <option value="doctor">Doctor</option>
-            </select>
-            {form.role === 'doctor' && (
-              <>
-                <select
-                  value={form.specialty}
-                  onChange={(e) => setForm({ ...form, specialty: e.target.value })}
-                  className="p-2 border border-gray-300 rounded bg-white"
-                >
-                  <option value="">Specialty…</option>
-                  {TEST_SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <input
-                  type="number"
-                  placeholder="Fee ($)"
-                  value={form.fee}
-                  onChange={(e) => setForm({ ...form, fee: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-                <input
-                  type="text"
-                  placeholder="Room"
-                  value={form.room}
-                  onChange={(e) => setForm({ ...form, room: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-                <input
-                  type="text"
-                  placeholder="Working Hours (e.g. 9AM-5PM)"
-                  value={form.hours}
-                  onChange={(e) => setForm({ ...form, hours: e.target.value })}
-                  className="p-2 border border-gray-300 rounded"
-                />
-              </>
-            )}
-            <button
-              type="submit"
-              disabled={busy}
-              className="col-span-2 bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
-            >
-              {busy ? 'Creating…' : 'Create Login'}
-            </button>
-          </form>
-        )}
-
-        {teamAccounts.length === 0 ? (
-          <p className="text-sm text-gray-500">No staff or doctor logins yet — create one above.</p>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-gray-500 border-b">
-                <th className="p-2">Name</th>
-                <th className="p-2">Email</th>
-                <th className="p-2">Role</th>
-                <th className="p-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {teamAccounts.map(renderAccount)}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {unclaimedDoctors.length > 0 && (
-        <div className="bg-white p-6 rounded shadow mb-6">
-          <h2 className="text-lg font-semibold mb-2">Doctors Without a Login</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            These doctor records exist but have no login, so they can't access the doctor panel. Claim one to link it to a new login.
-          </p>
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-gray-500 border-b">
-                <th className="p-2">Doctor</th>
-                <th className="p-2">Specialty</th>
-                <th className="p-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {unclaimedDoctors.map((d) => (
-                <tr key={d.id} className="border-b last:border-0">
-                  <td className="p-2">{d.name}</td>
-                  <td className="p-2">{d.specialty}</td>
-                  <td className="p-2 text-right">
-                    <button
-                      onClick={() => { setClaimDoctor(d); setClaimForm({ email: '', password: '' }); setError('') }}
-                      className="text-blue-600 text-sm hover:underline"
-                    >
-                      Claim
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {claimDoctor && (
-            <form onSubmit={handleClaim} className="mt-4 grid grid-cols-2 gap-3 bg-amber-50 border border-amber-200 p-4 rounded">
-              <p className="col-span-2 text-sm font-semibold text-amber-800">
-                Link {claimDoctor.name} ({claimDoctor.specialty}) to a login
-              </p>
-              <input
-                type="email"
-                placeholder="Login email"
-                value={claimForm.email}
-                onChange={(e) => setClaimForm({ ...claimForm, email: e.target.value })}
-                className="p-2 border border-gray-300 rounded"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Password (min. 6 characters)"
-                value={claimForm.password}
-                onChange={(e) => setClaimForm({ ...claimForm, password: e.target.value })}
-                className="p-2 border border-gray-300 rounded"
-                required
-                minLength={6}
-              />
-              <div className="col-span-2 flex gap-2">
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 disabled:bg-blue-300"
-                >
-                  {busy ? 'Linking…' : 'Link Login'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setClaimDoctor(null)}
-                  className="text-gray-600 text-sm hover:underline"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
+      {error && (
+        <div className="mb-md">
+          <Notice tone="danger" title="Action failed">{error}</Notice>
         </div>
       )}
 
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <h2 className="text-lg font-semibold mb-4">Patient Logins</h2>
-        {patientAccounts.length === 0 ? (
-          <p className="text-sm text-gray-500">Patients sign up from the login page. No patient logins yet.</p>
+      {pendingRemoval && (
+        <div className="mb-md">
+          <Notice tone="danger" title={`Remove login for ${pendingRemoval.email}?`}>
+            <p>{removalMessage(pendingRemoval)}</p>
+            <div className="mt-sm flex flex-wrap gap-2xs">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleDelete(pendingRemoval)}
+                loading={busy}
+                loadingLabel="Removing…"
+              >
+                Yes, remove this login
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setPendingRemoval(null)}>
+                Keep it
+              </Button>
+            </div>
+          </Notice>
+        </div>
+      )}
+
+      {showForm && (
+        <Panel title="Create a login" className="mb-md">
+          <form onSubmit={handleCreate} className="grid gap-sm sm:grid-cols-2">
+            <Field label="Name" htmlFor="user-name">
+              <input
+                id="user-name"
+                type="text"
+                className="input"
+                placeholder="e.g. Dr. Ahmed Raza"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
+            </Field>
+
+            <Field label="Email" htmlFor="user-email" hint="Used to sign in.">
+              <input
+                id="user-email"
+                type="email"
+                className="input"
+                placeholder="name@hospital.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                required
+              />
+            </Field>
+
+            <Field label="Password" htmlFor="user-password" hint="At least 6 characters.">
+              <input
+                id="user-password"
+                type="text"
+                className="input font-mono"
+                placeholder="••••••"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+                minLength={6}
+              />
+            </Field>
+
+            <Field label="Role" htmlFor="user-role">
+              <select
+                id="user-role"
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="input"
+              >
+                <option value="staff">Staff</option>
+                <option value="doctor">Doctor</option>
+              </select>
+            </Field>
+
+            {form.role === 'doctor' && (
+              <>
+                <Field label="Specialty" htmlFor="user-specialty">
+                  <select
+                    id="user-specialty"
+                    value={form.specialty}
+                    onChange={(e) => setForm({ ...form, specialty: e.target.value })}
+                    className="input"
+                  >
+                    <option value="">Choose a specialty</option>
+                    {TEST_SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </Field>
+                <Field label="Fee" htmlFor="user-fee">
+                  <input
+                    id="user-fee"
+                    type="number"
+                    min="0"
+                    className="input"
+                    placeholder="e.g. 500"
+                    value={form.fee}
+                    onChange={(e) => setForm({ ...form, fee: e.target.value })}
+                  />
+                </Field>
+                <Field label="Room" htmlFor="user-room">
+                  <input
+                    id="user-room"
+                    type="text"
+                    className="input"
+                    placeholder="e.g. 204"
+                    value={form.room}
+                    onChange={(e) => setForm({ ...form, room: e.target.value })}
+                  />
+                </Field>
+                <Field label="Working hours" htmlFor="user-hours">
+                  <input
+                    id="user-hours"
+                    type="text"
+                    className="input"
+                    placeholder="e.g. 9:00–17:00"
+                    value={form.hours}
+                    onChange={(e) => setForm({ ...form, hours: e.target.value })}
+                  />
+                </Field>
+              </>
+            )}
+
+            <div className="sm:col-span-2">
+              <Button type="submit" loading={busy} loadingLabel="Creating…">
+                Create login
+              </Button>
+            </div>
+          </form>
+        </Panel>
+      )}
+
+      <Panel
+        title="Staff & doctor logins"
+        meta={`${teamAccounts.length} ${teamAccounts.length === 1 ? 'account' : 'accounts'}`}
+        flush
+        className="mb-md"
+      >
+        {teamAccounts.length === 0 ? (
+          <EmptyState
+            title="No team logins yet"
+            hint="Create a login above and the matching doctor or staff record is created with it."
+          />
         ) : (
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>{teamAccounts.map(renderAccount)}</tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      {unclaimedDoctors.length > 0 && (
+        <Panel
+          title="Doctors without a login"
+          meta="These records cannot sign in until a login is linked."
+          className="mb-md"
+          flush
+        >
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Doctor</th>
+                  <th>Specialty</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {unclaimedDoctors.map((d) => (
+                  <tr key={d.id}>
+                    <td className="cell-strong">{d.name}</td>
+                    <td>{d.specialty}</td>
+                    <td className="text-right">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => { setClaimDoctor(d); setClaimForm({ email: '', password: '' }); setError('') }}
+                      >
+                        Claim
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {claimDoctor && (
+            <div className="panel-body border-t border-rule bg-paper-2">
+              <Notice tone="warn" title={`Link ${claimDoctor.name} (${claimDoctor.specialty}) to a login`}>
+                <form onSubmit={handleClaim} className="mt-sm grid gap-sm sm:grid-cols-2">
+                  <Field label="Login email" htmlFor="claim-email">
+                    <input
+                      id="claim-email"
+                      type="email"
+                      className="input"
+                      placeholder="name@hospital.com"
+                      value={claimForm.email}
+                      onChange={(e) => setClaimForm({ ...claimForm, email: e.target.value })}
+                      required
+                    />
+                  </Field>
+                  <Field label="Password" htmlFor="claim-password" hint="At least 6 characters.">
+                    <input
+                      id="claim-password"
+                      type="text"
+                      className="input font-mono"
+                      placeholder="••••••"
+                      value={claimForm.password}
+                      onChange={(e) => setClaimForm({ ...claimForm, password: e.target.value })}
+                      required
+                      minLength={6}
+                    />
+                  </Field>
+                  <div className="flex flex-wrap gap-2xs sm:col-span-2">
+                    <Button type="submit" loading={busy} loadingLabel="Linking…">
+                      Link login
+                    </Button>
+                    <Button variant="ghost" onClick={() => setClaimDoctor(null)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </Notice>
+            </div>
+          )}
+        </Panel>
+      )}
+
+      <Panel
+        title="Patient logins"
+        meta="Self-registered from the login page"
+        flush
+        className="mb-md"
+      >
+        {patientAccounts.length === 0 ? (
+          <EmptyState
+            title="No patient logins yet"
+            hint="Patients sign up themselves, so this list fills as they register."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>{patientAccounts.map(renderAccount)}</tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="Administrator" meta="Exactly one, and it cannot be changed here" flush>
+        <div className="overflow-x-auto">
+          <table className="table">
             <thead>
-              <tr className="text-gray-500 border-b">
-                <th className="p-2">Name</th>
-                <th className="p-2">Email</th>
-                <th className="p-2"></th>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
               </tr>
             </thead>
-            <tbody>
-              {patientAccounts.map(renderAccount)}
-            </tbody>
+            <tbody>{adminAccounts.map(renderAccount)}</tbody>
           </table>
-        )}
-      </div>
-
-      <div className="bg-white p-6 rounded shadow">
-        <h2 className="text-lg font-semibold mb-4">Administrator</h2>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="text-gray-500 border-b">
-              <th className="p-2">Name</th>
-              <th className="p-2">Email</th>
-            </tr>
-          </thead>
-          <tbody>
-            {adminAccounts.map(renderAccount)}
-          </tbody>
-        </table>
-        <p className="text-xs text-gray-500 mt-2">
-          There is exactly one administrator login. It cannot be created, changed, or removed from here.
-        </p>
-      </div>
+        </div>
+      </Panel>
     </div>
   )
 }

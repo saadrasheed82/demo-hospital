@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { staffService } from '../../services/supabase'
+import { Button, EmptyState, Field, Modal, Notice, PageHeader, Panel, SkeletonRows, StatusChip } from '../../components/ui'
 
 const ROLES = ['staff', 'receptionist', 'nurse']
+const ROLE_TONE = { admin: 'active', doctor: 'ok', staff: 'neutral' }
 
 export default function StaffPage() {
   const [staff, setStaff] = useState([])
@@ -33,78 +35,71 @@ export default function StaffPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="p-4 text-center">
-        <p className="text-gray-500">Loading staff...</p>
-      </div>
-    )
-  }
-
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Staff Management</h1>
-        <span className="text-sm text-gray-600">
-          Add or remove staff from <NavLink to="/admin/team-logins" className="text-blue-600 hover:underline">Team Logins</NavLink>
-        </span>
-      </div>
+      <PageHeader
+        eyebrow="Administration"
+        title="Staff"
+        meta="Names, emails and roles for counter and clinical support staff."
+        actions={
+          <Link className="btn btn--secondary" to="/admin/team-logins">
+            Team logins
+          </Link>
+        }
+      />
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded mb-4">
-          {error}
+        <div className="mb-md">
+          <Notice tone="danger" title="Could not save changes">{error}</Notice>
         </div>
       )}
 
-      <div className="mb-4">
-        <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">
-          ✅ Live data
-        </span>
-      </div>
-
-      <table className="w-full border-collapse bg-white shadow rounded">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-3 text-left">Name</th>
-            <th className="p-3 text-left">Email</th>
-            <th className="p-3 text-left">Role</th>
-            <th className="p-3 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {staff.map(s => (
-            <tr key={s.id} className="border-t">
-              <td className="p-3">{s.name}</td>
-              <td className="p-3">{s.email}</td>
-              <td className="p-3">
-                <span className={`px-2 py-1 rounded text-xs ${
-                  s.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                  s.role === 'doctor' ? 'bg-green-100 text-green-800' :
-                  s.role === 'staff' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {s.role}
-                </span>
-              </td>
-              <td className="p-3">
-                <button
-                  onClick={() => setEditingStaff(s)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Edit
-                </button>
-              </td>
-            </tr>
-          ))}
-          {staff.length === 0 && (
-            <tr>
-              <td colSpan="4" className="p-4 text-center text-gray-500">
-                No staff members found. Create a staff login on the Team Logins page to add one.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <Panel title="Staff register" meta={`${staff.length} ${staff.length === 1 ? 'person' : 'people'}`} flush>
+        {loading ? (
+          <div className="panel-body">
+            <SkeletonRows rows={5} />
+          </div>
+        ) : staff.length === 0 ? (
+          <EmptyState
+            title="No staff records"
+            hint="Create a staff login on the Team logins page to add a record here."
+            action={
+              <Link className="btn btn--primary" to="/admin/team-logins">
+                Go to team logins
+              </Link>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staff.map(s => (
+                  <tr key={s.id}>
+                    <td className="cell-strong">{s.name}</td>
+                    <td className="font-mono text-xs">{s.email}</td>
+                    <td>
+                      <StatusChip tone={ROLE_TONE[s.role] || 'neutral'}>{s.role}</StatusChip>
+                    </td>
+                    <td className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingStaff(s)}>
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
 
       {editingStaff && (
         <StaffForm
@@ -122,45 +117,25 @@ export default function StaffPage() {
 function StaffForm({ staff, roles, loading, onClose, onSave }) {
   const [role, setRole] = useState(staff?.role || 'staff')
 
-  const handleSubmit = () => {
-    onSave({ role })
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded shadow-md w-80">
-        <h2 className="text-xl font-bold mb-4">
-          Edit {staff.name}
-        </h2>
-        <div className="space-y-3">
-          <p className="text-sm text-gray-600">
-            {staff.name} · {staff.email}
-            <span className="block text-xs text-gray-400 mt-1">Name and email are managed on Team Logins.</span>
-          </p>
+    <Modal title={`Edit ${staff.name}`} meta={`${staff.email} · managed on Team logins`} onClose={onClose}>
+      <div className="space-y-sm">
+        <Field label="Role" htmlFor="staff-role" hint="Controls what this person can access after signing in.">
           <select
+            id="staff-role"
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="input"
           >
             {roles.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-        </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {loading ? 'Saving...' : 'Save'}
-          </button>
+        </Field>
+
+        <div className="flex flex-wrap justify-end gap-2xs border-t border-rule pt-sm">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={() => onSave({ role })} loading={loading} loadingLabel="Saving…">Save</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

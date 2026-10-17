@@ -1,12 +1,18 @@
 import { useState, useEffect, createContext, useContext } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { doctorsService } from '../../services/supabase'
 import { TEST_DOCTORS } from '../../data/seedDoctors'
 import { isSupabaseActive } from '../../supabase'
 import { useAuth } from '../../auth/AuthContext'
+import { AppShell, Notice } from '../../components/ui'
 
 const DoctorContext = createContext(null)
 export const useDoctor = () => useContext(DoctorContext)
+
+const NAV = [
+  { to: '/doctor', label: "Today's queue", end: true },
+  { to: '/doctor/history', label: 'History' },
+]
 
 export default function DoctorLayout() {
   const { user } = useAuth()
@@ -33,39 +39,26 @@ export default function DoctorLayout() {
 
   const doctor = doctors.find(d => d.id === doctorId)
 
+  const aside = doctor ? (
+    <div className="panel--quiet panel border-0 bg-transparent px-0 py-0">
+      <p className="label-mono">On duty</p>
+      <p className="mt-3xs truncate text-sm font-medium text-ink">{doctor.name}</p>
+      <p className="truncate text-xs text-ink-3">
+        {doctor.specialty}
+        {doctor.room ? ` · Room ${doctor.room}` : ''}
+      </p>
+    </div>
+  ) : (
+    <Notice tone="warn" title="No doctor record linked to this login">
+      Ask an administrator to claim the doctor on Team logins.
+    </Notice>
+  )
+
   return (
     <DoctorContext.Provider value={{ doctor, doctorId, isDemo: !isSupabaseActive }}>
-      <div className="flex min-h-screen">
-        <nav className="w-64 bg-gray-800 text-white p-4 flex flex-col gap-4">
-          <h2 className="font-bold text-lg">Doctor Panel</h2>
-          {doctor ? (
-            <div className="text-sm bg-gray-700 rounded p-2">
-              <p className="font-semibold">{doctor.name}</p>
-              <p className="text-gray-300 text-xs">{doctor.specialty}</p>
-            </div>
-          ) : (
-            <div className="text-sm bg-amber-700 rounded p-2">
-              <p className="font-semibold">No doctor record linked to this login</p>
-              <p className="text-gray-100 text-xs">Ask an admin to claim the doctor on Team Logins.</p>
-            </div>
-          )}
-          <NavLink
-            to="/doctor"
-            className="block py-2 px-2 hover:bg-gray-700 rounded"
-          >
-            My Queue
-          </NavLink>
-          <NavLink
-            to="/doctor/history"
-            className="block py-2 px-2 hover:bg-gray-700 rounded"
-          >
-            History
-          </NavLink>
-        </nav>
-        <main className="flex-1 p-6">
-          <Outlet />
-        </main>
-      </div>
+      <AppShell workspace="Clinician desk" role="Doctor" nav={NAV} aside={aside}>
+        <Outlet />
+      </AppShell>
     </DoctorContext.Provider>
   )
 }

@@ -4,6 +4,7 @@ import { ArrivalToggle } from './ArrivalToggle'
 import { NextPatientButton } from './NextPatientButton'
 import { ConsultNotes } from './ConsultNotes'
 import { tokensService } from '../../services/supabase'
+import { Button, EmptyState, Notice, PageHeader, Panel, PaymentChip, SkeletonRows, StatusChip } from '../../components/ui'
 
 const INITIAL_TOKENS = [
   { token: '101', name: 'Sarah Johnson', age: 34, condition: 'Chest pain', paymentStatus: 'paid', status: 'current' },
@@ -83,69 +84,87 @@ export default function DoctorDashboard() {
 
   return (
     <div>
+      <PageHeader
+        eyebrow="Clinician desk"
+        title={doctor?.name ? `${doctor.name} — today's queue` : "Today's queue"}
+        meta={
+          doctor
+            ? `${doctor.specialty}${doctor.room ? ` · Room ${doctor.room}` : ''}`
+            : 'No doctor record linked to this login.'
+        }
+        actions={<ArrivalToggle status={arrivalStatus} onStatusChange={setArrivalStatus} />}
+      />
+
       {isDemo && (
-        <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-yellow-700">
-          🎭 Demo mode — database not connected. Showing sample queue.
+        <div className="mb-md">
+          <Notice tone="warn" title="Demo mode">
+            No database is connected, so a sample queue is shown and changes are not saved.
+          </Notice>
         </div>
       )}
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">{doctor?.name || 'Doctor'} — Today's Queue</h1>
-        <ArrivalToggle status={arrivalStatus} onStatusChange={setArrivalStatus} />
-      </div>
-
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded mb-4">{error}</div>
+        <div className="mb-md">
+          <Notice tone="danger" title="Could not update the queue">{error}</Notice>
+        </div>
       )}
 
       {loading ? (
-        <p className="text-gray-500">Loading queue…</p>
+        <Panel title="Today's queue">
+          <SkeletonRows rows={5} />
+        </Panel>
       ) : (
         <>
+          {/* ── the one dark beat: who is in the room now ─────────────── */}
           {currentToken ? (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded">
-              <p className="text-sm text-gray-600">Currently Seeing</p>
-              <div className="flex justify-between items-center">
-                <div>
-                  <span className="text-2xl font-bold text-yellow-700">Token #{currentToken.token}</span>
-                  <span className="ml-4 text-xl">{currentToken.name}</span>
-                  {(currentToken.condition || currentToken.age != null) && (
-                    <p className="text-gray-600">
-                      {[currentToken.condition, currentToken.age != null ? `${currentToken.age} yrs` : null]
-                        .filter(Boolean).join(' · ')}
-                    </p>
-                  )}
+            <section className={`graphite mb-md p-md lg:p-lg ${arrivalStatus !== 'arrived' ? 'opacity-60' : ''}`}>
+              <div className="flex flex-wrap items-start justify-between gap-md">
+                <div className="min-w-0">
+                  <p className="label-mono">Currently seeing</p>
+                  <p className="mt-2xs font-mono text-4xl font-semibold leading-none tracking-tight lg:text-5xl">
+                    #{currentToken.token}
+                  </p>
+                  <p className="mt-sm font-display text-lg font-semibold">{currentToken.name}</p>
+                  <p className="mt-3xs text-sm text-graphite-dim">
+                    {[currentToken.condition, currentToken.age != null ? `${currentToken.age} years` : null]
+                      .filter(Boolean)
+                      .join(' · ') || 'No condition recorded'}
+                  </p>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowNotes(currentToken)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                  >
-                    Add Notes
-                  </button>
+
+                <div className="flex flex-wrap gap-2xs">
+                  <Button variant="secondary" onClick={() => setShowNotes(currentToken)}>
+                    Add consult notes
+                  </Button>
                   <NextPatientButton
                     onClick={handleNext}
                     disabled={busy}
-                    label={busy ? 'Updating…' : 'Next Patient →'}
+                    label={busy ? 'Updating…' : 'Next patient'}
                   />
                 </div>
               </div>
-            </div>
+
+              {arrivalStatus !== 'arrived' && (
+                <p className="mt-md border-t border-graphite-2 pt-sm text-sm text-graphite-dim">
+                  You are marked as {arrivalStatus} — the counter can see this.
+                </p>
+              )}
+            </section>
           ) : (
             pendingTokens.length > 0 && (
-              <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded">
-                <p className="text-sm text-gray-600">No patient being seen — next in queue</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-xl font-bold">
-                    #{pendingTokens[0].token} — {pendingTokens[0].name}
-                  </span>
-                  <NextPatientButton
-                    onClick={handleNext}
-                    disabled={busy}
-                    label={busy ? 'Updating…' : 'Call Next Patient →'}
-                  />
+              <section className="panel mb-md flex flex-wrap items-center justify-between gap-md px-md py-md">
+                <div className="min-w-0">
+                  <p className="label-mono">No one being seen</p>
+                  <p className="mt-2xs font-display text-lg font-semibold">
+                    Next up — <span className="token-id">#{pendingTokens[0].token}</span> {pendingTokens[0].name}
+                  </p>
                 </div>
-              </div>
+                <NextPatientButton
+                  onClick={handleNext}
+                  disabled={busy}
+                  label={busy ? 'Updating…' : 'Call next patient'}
+                />
+              </section>
             )
           )}
 
@@ -157,58 +176,76 @@ export default function DoctorDashboard() {
             />
           )}
 
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold mb-2">Waiting ({pendingTokens.length})</h2>
-            <table className="w-full border-collapse bg-white shadow rounded">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="p-3 text-left">Token</th>
-                  <th className="p-3 text-left">Patient</th>
-                  <th className="p-3 text-left">Condition</th>
-                  <th className="p-3 text-left">Payment</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingTokens.map(t => (
-                  <tr key={t.id || t.token} className="border-t">
-                    <td className="p-3 font-bold">{t.token}</td>
-                    <td className="p-3">{t.name}{t.age != null ? ` (${t.age})` : ''}</td>
-                    <td className="p-3">{t.condition || '—'}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        (t.paymentStatus || t.payment_status) === 'paid'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {t.paymentStatus || t.payment_status || 'unpaid'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-                {pendingTokens.length === 0 && (
-                  <tr>
-                    <td colSpan="4" className="p-4 text-center text-gray-500">No one waiting.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {finishedTokens.length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">Completed ({finishedTokens.length})</h2>
-              <div className="space-y-2">
-                {finishedTokens.map(t => (
-                  <div key={t.id || t.token} className="p-3 bg-gray-50 rounded flex justify-between">
-                    <span>#{t.token} — {t.name} {t.condition ? `(${t.condition})` : ''}</span>
-                    <span className="text-green-600 text-sm">
-                      {t.status === 'completed' ? '✓ Completed' : t.status}
-                    </span>
-                  </div>
-                ))}
+          <div className="grid gap-md">
+            <Panel
+              title="Waiting"
+              meta={`${pendingTokens.length} ${pendingTokens.length === 1 ? 'patient' : 'patients'} in line`}
+              flush
+            >
+              <div className="overflow-x-auto">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Token</th>
+                      <th>Patient</th>
+                      <th>Condition</th>
+                      <th>Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingTokens.map(t => (
+                      <tr key={t.id || t.token}>
+                        <td className="token-id">#{t.token}</td>
+                        <td className="cell-strong">
+                          {t.name}
+                          {t.age != null && <span className="ml-2xs font-normal text-ink-3">({t.age})</span>}
+                        </td>
+                        <td>{t.condition || '—'}</td>
+                        <td><PaymentChip status={t.paymentStatus || t.payment_status} /></td>
+                      </tr>
+                    ))}
+                    {pendingTokens.length === 0 && (
+                      <tr>
+                        <td colSpan={4}>
+                          <EmptyState
+                            title="No one waiting"
+                            hint="New bookings for you will appear here automatically."
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          )}
+            </Panel>
+
+            {finishedTokens.length > 0 && (
+              <Panel title="Closed today" meta={`${finishedTokens.length} ${finishedTokens.length === 1 ? 'token' : 'tokens'}`} flush>
+                <div className="overflow-x-auto">
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Token</th>
+                        <th>Patient</th>
+                        <th>Condition</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {finishedTokens.map(t => (
+                        <tr key={t.id || t.token}>
+                          <td className="token-id">#{t.token}</td>
+                          <td>{t.name}</td>
+                          <td>{t.condition || '—'}</td>
+                          <td><StatusChip tone="muted">{t.status.replace(/_/g, ' ')}</StatusChip></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
+            )}
+          </div>
         </>
       )}
     </div>

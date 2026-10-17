@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { isSupabaseActive } from '../supabase'
+import { Button, Field, Notice } from '../components/ui'
 
 export default function LoginPage() {
   const [mode, setMode] = useState('login') // 'login' | 'signup'
@@ -45,90 +46,132 @@ export default function LoginPage() {
     }
   }
 
+  const switchMode = () => {
+    setMode(mode === 'login' ? 'signup' : 'login')
+    setError('')
+    setName('')
+    setPassword('')
+  }
+
+  const isLogin = mode === 'login'
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-96">
-        <div className="text-center mb-6">
-          <div className="text-4xl mb-2">🏥</div>
-          <h1 className="text-2xl font-bold text-gray-800">Hospital Booking</h1>
-          <p className="text-gray-500 text-sm">
-            {isSupabaseActive ? 'Sign in to your account' : 'Demo mode — data is not saved between sessions'}
-          </p>
+    <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
+      {/* ── the one dark beat: the brand panel ───────────────────────── */}
+      <section className="graphite m-0 flex flex-col justify-between rounded-none border-0 p-md lg:m-3 lg:p-lg">
+        <div>
+          <p className="font-display text-lg font-semibold tracking-tight text-graphite-ink">Saad Hospital</p>
+          <p className="label-mono mt-3xs">Appointment &amp; queue system</p>
         </div>
 
-        {mode === 'login' ? (
-          <form onSubmit={handleLogin} className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-            <button type="submit" disabled={busy} className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300">
-              {busy ? 'Signing in...' : 'Login'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleSignup} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password (min. 6 characters)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-              minLength={6}
-            />
-            <button type="submit" disabled={busy} className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:bg-blue-300">
-              {busy ? 'Creating account...' : 'Sign up'}
-            </button>
-          </form>
-        )}
+        <div className="my-lg max-w-md">
+          <h1 className="font-display text-xl font-semibold leading-tight lg:text-2xl">
+            One queue your whole hospital can read.
+          </h1>
+          <p className="mt-sm text-sm leading-relaxed text-graphite-dim">
+            Patients book and track a token. Counter staff run the live queue. Doctors call the next patient and file
+            consult notes. Administrators manage the team, schedules and revenue — against one shared record.
+          </p>
 
-        {error && <p className="text-red-500 text-center text-sm mt-3">{error}</p>}
+          <dl className="mt-lg grid grid-cols-2 gap-x-md gap-y-sm border-t border-graphite-2 pt-md">
+            {[
+              ['Patient', 'Book · pay · track'],
+              ['Counter', 'Live queue · re-queue'],
+              ['Doctor', 'Now serving · notes'],
+              ['Admin', 'Team · schedule · revenue'],
+            ].map(([role, detail]) => (
+              <div key={role}>
+                <dt className="label-mono text-graphite-ink">{role}</dt>
+                <dd className="mt-3xs text-xs text-graphite-dim">{detail}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
 
-        <button
-          onClick={() => {
-            setMode(mode === 'login' ? 'signup' : 'login')
-            setError('')
-            setName('')
-            setPassword('')
-          }}
-          className="w-full text-sm text-blue-600 hover:underline mt-4"
-        >
-          {mode === 'login' ? "New patient? Sign up with your email" : "Already have an account? Log in"}
-        </button>
-
-        <p className="text-xs text-gray-400 text-center mt-6">
-          Staff and doctor logins are created by the hospital administrator.
+        <p className="label-mono">
+          {isSupabaseActive ? 'Live database connected' : 'Demo mode · nothing is saved'}
         </p>
-      </div>
+      </section>
+
+      {/* ── the form ─────────────────────────────────────────────────── */}
+      <section className="flex items-center justify-center px-md py-lg lg:px-lg">
+        <div className="w-full max-w-sm">
+          <p className="label-mono">{isLogin ? 'Sign in' : 'Patient sign-up'}</p>
+          <h2 className="mt-3xs font-display text-lg font-semibold">
+            {isLogin ? 'Access your workspace' : 'Create your patient account'}
+          </h2>
+          <p className="mt-2xs text-sm text-ink-3">
+            {isLogin
+              ? 'Use the email your account was created with.'
+              : 'Book appointments and track your queue in real time.'}
+          </p>
+
+          <form onSubmit={isLogin ? handleLogin : handleSignup} className="mt-md space-y-sm">
+            {!isLogin && (
+              <Field label="Full name" htmlFor="login-name">
+                <input
+                  id="login-name"
+                  type="text"
+                  autoComplete="name"
+                  className="input"
+                  placeholder="e.g. Ayesha Khan"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </Field>
+            )}
+
+            <Field label="Email" htmlFor="login-email">
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                className="input"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </Field>
+
+            <Field
+              label="Password"
+              htmlFor="login-password"
+              hint={isLogin ? undefined : 'At least 6 characters.'}
+            >
+              <input
+                id="login-password"
+                type="password"
+                autoComplete={isLogin ? 'current-password' : 'new-password'}
+                className={error ? 'input input--error' : 'input'}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={isLogin ? undefined : 6}
+              />
+            </Field>
+
+            {error && <Notice tone="danger">{error}</Notice>}
+
+            <Button type="submit" block loading={busy} loadingLabel={isLogin ? 'Signing in…' : 'Creating account…'}>
+              {isLogin ? 'Sign in' : 'Create account'}
+            </Button>
+          </form>
+
+          <p className="mt-md border-t border-rule pt-sm text-sm text-ink-3">
+            {isLogin ? 'New patient? ' : 'Already registered? '}
+            <button type="button" onClick={switchMode} className="link">
+              {isLogin ? 'Create an account' : 'Sign in instead'}
+            </button>
+          </p>
+
+          <p className="mt-sm text-xs text-ink-3">
+            Staff and doctor logins are issued by the hospital administrator from the admin workspace.
+          </p>
+        </div>
+      </section>
     </div>
   )
 }

@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react'
 import { appointmentsService, doctorsService, patientsService, staffService } from '../../services/supabase'
-import { TEST_DOCTORS } from '../../data/seedDoctors'
-import { TEST_PATIENTS } from '../../data/seedPatients'
+import { EmptyState, Notice, PageHeader, Panel, SkeletonRows, Stat, StatRow } from '../../components/ui'
 
-const MOCK_REVENUE = [
-  { day: 'Mon', revenue: 320 },
-  { day: 'Tue', revenue: 410 },
-  { day: 'Wed', revenue: 380 },
-  { day: 'Thu', revenue: 480 },
-  { day: 'Fri', revenue: 420 },
-  { day: 'Sat', revenue: 280 },
-  { day: 'Sun', revenue: 190 },
+const EMPTY_REVENUE = [
+  { day: 'Mon', revenue: 0 },
+  { day: 'Tue', revenue: 0 },
+  { day: 'Wed', revenue: 0 },
+  { day: 'Thu', revenue: 0 },
+  { day: 'Fri', revenue: 0 },
+  { day: 'Sat', revenue: 0 },
+  { day: 'Sun', revenue: 0 },
 ]
 
 export default function AnalyticsPage() {
@@ -25,7 +24,7 @@ export default function AnalyticsPage() {
     busiestDoctor: 'N/A',
     busiestSpecialty: 'N/A',
   })
-  const [revenueData, setRevenueData] = useState(MOCK_REVENUE)
+  const [revenueData, setRevenueData] = useState(EMPTY_REVENUE)
   const [doctorWorkload, setDoctorWorkload] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -107,104 +106,146 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-gray-500">Loading analytics...</p>
+      <div>
+        <PageHeader eyebrow="Administration" title="Analytics" />
+        <StatRow>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="panel px-md py-sm">
+              <div className="skeleton h-3 w-24" />
+              <div className="skeleton mt-2xs h-7 w-16" />
+            </div>
+          ))}
+        </StatRow>
+        <Panel title="Doctor workload">
+          <SkeletonRows rows={4} />
+        </Panel>
       </div>
     )
   }
 
-  const statCards = [
-    { label: "Today's Appointments", value: stats.todayAppointments, icon: '📅' },
-    { label: 'Revenue (Today)', value: `$${stats.totalRevenue}`, icon: '💰' },
-    { label: 'No-show Rate', value: stats.noShowRate, icon: '⚠️' },
-    { label: 'Avg Wait Time', value: stats.avgWaitTime, icon: '⏱️' },
-  ]
+  const peak = Math.max(...revenueData.map(d => d.revenue), 1)
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Analytics Dashboard</h1>
+      <PageHeader
+        eyebrow="Administration"
+        title="Analytics"
+        meta="Today's throughput, the week's revenue and per-doctor load."
+      />
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded mb-4">
-          {error}
+        <div className="mb-md">
+          <Notice tone="danger" title="Could not load analytics">{error}</Notice>
         </div>
       )}
 
-      <div className="mb-4">
-        <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">
-          ✅ Live data from Supabase
-        </span>
-      </div>
+      <StatRow>
+        <Stat label="Today's visits" value={stats.todayAppointments} foot="Appointments booked today" />
+        <Stat label="Revenue today" value={`$${stats.totalRevenue}`} foot="Collected from paid visits" tone="ok" />
+        <Stat
+          label="No-show rate"
+          value={stats.noShowRate}
+          foot="Share of today's bookings that did not arrive"
+          tone={stats.noShowRate === '0%' ? 'default' : 'danger'}
+        />
+        <Stat label="Avg wait" value={stats.avgWaitTime} foot="Estimated from today's queue length" />
+      </StatRow>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {statCards.map(card => (
-          <div key={card.label} className="bg-white p-4 rounded shadow text-center">
-            <div className="text-2xl mb-2">{card.icon}</div>
-            <p className="text-gray-600 text-sm">{card.label}</p>
-            <p className="text-2xl font-bold">{card.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-6">
-        <SummaryCard label="Total Doctors" value={stats.totalDoctors} bg="bg-blue-50" />
-        <SummaryCard label="Total Patients" value={stats.totalPatients} bg="bg-green-50" />
-        <SummaryCard label="Total Staff" value={stats.totalStaff} bg="bg-purple-50" />
-        <SummaryCard label="Busiest Doctor" value={stats.busiestDoctor} bg="bg-yellow-50" />
-        <SummaryCard label="Busiest Specialty" value={stats.busiestSpecialty} bg="bg-pink-50" />
-      </div>
-
-      <div className="bg-white p-4 rounded shadow mb-6">
-        <h2 className="text-lg font-semibold mb-3">Revenue This Week</h2>
-        <div className="flex items-end h-40 gap-2">
-          {revenueData.map(d => (
-            <div key={d.day} className="flex-1 flex flex-col items-center">
-              <div
-                className="w-full bg-blue-600 rounded-t transition-all"
-                style={{ height: `${Math.max((d.revenue / Math.max(stats.totalRevenue, 1)) * 100, 2)}%` }}
-                title={`$${d.revenue}`}
-              />
-              <span className="text-xs mt-1">{d.day}</span>
-              <span className="text-xs text-gray-500">${d.revenue}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-white p-4 rounded shadow">
-        <h2 className="text-lg font-semibold mb-3">Doctor Workload</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="p-2 text-left">Doctor</th>
-                <th className="p-2 text-left">Specialty</th>
-                <th className="p-2 text-left">Today</th>
-                <th className="p-2 text-left">This Week</th>
-              </tr>
-            </thead>
-            <tbody>
-              {doctorWorkload.map((doc) => (
-                <tr key={doc.id} className="border-t">
-                  <td className="p-2">{doc.name}</td>
-                  <td className="p-2">{doc.specialty}</td>
-                  <td className="p-2">{doc.today} patients</td>
-                  <td className="p-2">{doc.week} patients</td>
-                </tr>
+      <div className="grid gap-md lg:grid-cols-3">
+        <Panel
+          title="Revenue this week"
+          meta="Paid appointments, grouped by weekday"
+          className="lg:col-span-2"
+        >
+          {stats.totalRevenue === 0 ? (
+            <EmptyState
+              title="No revenue recorded this week"
+              hint="Paid appointments will roll up here by weekday."
+            />
+          ) : (
+            <div className="space-y-2xs">
+              {revenueData.map(d => (
+                <div key={d.day} className="flex items-center gap-sm">
+                  <span className="label-mono w-10 shrink-0">{d.day}</span>
+                  <div className="h-5 min-w-0 flex-1 overflow-hidden rounded-[3px] bg-paper-3">
+                    <div
+                      className="h-full rounded-[3px] bg-accent transition-[width] duration-300 ease-out"
+                      style={{ width: `${Math.max((d.revenue / peak) * 100, d.revenue > 0 ? 3 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="w-16 shrink-0 text-right font-mono text-xs text-ink-2 tnum">${d.revenue}</span>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
-}
+            </div>
+          )}
+        </Panel>
 
-function SummaryCard({ label, value, bg }) {
-  return (
-    <div className={`${bg} p-4 rounded shadow text-center`}>
-      <p className="text-gray-600 text-sm">{label}</p>
-      <p className="text-xl font-bold text-gray-800 truncate">{value}</p>
+        <Panel title="Roster size">
+          <dl className="space-y-xs text-sm">
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Doctors</dt>
+              <dd className="font-medium tnum text-ink">{stats.totalDoctors}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Patients</dt>
+              <dd className="font-medium tnum text-ink">{stats.totalPatients}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Staff</dt>
+              <dd className="font-medium tnum text-ink">{stats.totalStaff}</dd>
+            </div>
+            <div className="flex justify-between gap-sm border-t border-rule pt-xs">
+              <dt className="text-ink-3">Busiest today</dt>
+              <dd className="text-right font-medium text-ink">{stats.busiestDoctor}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Specialty</dt>
+              <dd className="text-right font-medium text-ink">{stats.busiestSpecialty}</dd>
+            </div>
+          </dl>
+        </Panel>
+      </div>
+
+      <Panel title="Doctor workload" meta="Patients seen today and this week" className="mt-md" flush>
+        {doctorWorkload.length === 0 ? (
+          <EmptyState title="No doctors on the roster" hint="Add doctors to see their workload here." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Doctor</th>
+                  <th>Specialty</th>
+                  <th>Today</th>
+                  <th>This week</th>
+                  <th>Load</th>
+                </tr>
+              </thead>
+              <tbody>
+                {doctorWorkload.map(doc => {
+                  const maxToday = Math.max(...doctorWorkload.map(d => d.today), 1)
+                  return (
+                    <tr key={doc.id || doc.name}>
+                      <td className="cell-strong">{doc.name}</td>
+                      <td>{doc.specialty}</td>
+                      <td className="tnum">{doc.today}</td>
+                      <td className="tnum">{doc.week}</td>
+                      <td className="w-40">
+                        <div className="h-2 overflow-hidden rounded-[2px] bg-paper-3">
+                          <div
+                            className="h-full rounded-[2px] bg-accent-line"
+                            style={{ width: `${(doc.today / maxToday) * 100}%` }}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
     </div>
   )
 }

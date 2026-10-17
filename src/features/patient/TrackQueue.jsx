@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 import { patientsService, tokensService, doctorsService } from '../../services/supabase'
 import { isSupabaseActive } from '../../supabase'
+import { Button, EmptyState, Notice, PageHeader, Panel, QueueChip, SkeletonRows, StatusChip } from '../../components/ui'
 
 export default function TrackQueue() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [myToken, setMyToken] = useState(null)
   const [queue, setQueue] = useState([])
   const [doctor, setDoctor] = useState(null)
@@ -56,29 +59,46 @@ export default function TrackQueue() {
     }
   }, [user?.email])
 
+  const header = (
+    <PageHeader
+      eyebrow="Patient portal"
+      title="My queue"
+      meta="This page updates the moment the counter calls a token."
+    />
+  )
+
   if (!isSupabaseActive) {
     return (
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold mb-4">My Appointment</h1>
-        <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm text-yellow-700">
-          🎭 Demo mode — live queue tracking needs a database connection.
-        </div>
+      <div>
+        {header}
+        <Notice tone="warn" title="Demo mode">
+          Live queue tracking needs a database connection. Book against a connected hospital to see your position.
+        </Notice>
       </div>
     )
   }
 
   if (loading) {
-    return <div className="max-w-2xl"><h1 className="text-2xl font-bold mb-4">My Appointment</h1><p className="text-gray-500">Loading your queue…</p></div>
+    return (
+      <div>
+        {header}
+        <Panel title="Your token">
+          <SkeletonRows rows={3} />
+        </Panel>
+      </div>
+    )
   }
 
   if (!myToken) {
     return (
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold mb-4">My Appointment</h1>
-        <div className="bg-white rounded shadow p-6 text-center">
-          <div className="text-4xl mb-3">🩺</div>
-          <p className="text-gray-600">You have no active appointment.</p>
-          <p className="text-sm text-gray-400 mt-1">Book one and it will show up here in real time.</p>
+      <div>
+        {header}
+        <div className="panel">
+          <EmptyState
+            title="No active appointment"
+            hint="Book a doctor and your token, position and live queue will appear here."
+            action={<Button onClick={() => navigate('/patient')}>Find a doctor</Button>}
+          />
         </div>
       </div>
     )
@@ -92,64 +112,99 @@ export default function TrackQueue() {
   ).length
   const myPosition = ahead + 1
   const total = queue.filter(t => t.status !== 'completed' && t.status !== 'no_show').length
+  const isMyTurn = myToken.status === 'current'
+  const activeQueue = queue.filter(t => t.status !== 'completed')
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">My Appointment</h1>
+    <div>
+      {header}
 
-      <div className="bg-blue-50 border border-blue-200 rounded p-6 mb-6 text-center">
-        <p className="text-gray-600 mb-1">Your Token</p>
-        <p className="text-5xl font-bold text-blue-600 mb-4">#{myToken.token}</p>
-        <div className="flex justify-center gap-6 text-sm">
+      {/* ── the one dark beat: your token ────────────────────────────── */}
+      <section className="graphite mb-md p-md lg:p-lg">
+        <div className="flex flex-wrap items-start justify-between gap-md">
           <div>
-            <p className="text-gray-500">Doctor</p>
-            <p className="font-semibold">{doctor?.name || '—'}</p>
+            <p className="label-mono">Your token</p>
+            <p className="mt-2xs font-mono text-4xl font-semibold leading-none tracking-tight lg:text-5xl">
+              #{myToken.token}
+            </p>
+            <p className="mt-sm text-sm text-graphite-dim">
+              {doctor?.name || '—'}
+              {doctor?.specialty ? ` · ${doctor.specialty}` : ''}
+            </p>
           </div>
-          <div>
-            <p className="text-gray-500">Position</p>
-            <p className="font-semibold">{myPosition} of {total}</p>
-          </div>
-          <div>
-            <p className="text-gray-500">Payment</p>
-            <p className="font-semibold">{myToken.payment_status === 'paid' ? 'Paid' : 'Unpaid'}</p>
-          </div>
-        </div>
-        {myToken.status === 'current' && (
-          <div className="mt-4 inline-block bg-green-100 text-green-800 text-sm font-semibold px-4 py-2 rounded-full">
-            It's your turn — please head to {doctor?.room || 'your room'}
-          </div>
-        )}
-      </div>
 
-      <h2 className="font-semibold mb-3">Live Queue</h2>
-      <div className="space-y-2">
-        {queue
-          .filter(t => t.status !== 'completed')
-          .map(t => (
-            <div
-              key={t.id}
-              className={`flex justify-between items-center p-3 rounded ${
-                t.id === myToken.id
-                  ? 'bg-yellow-100 border-2 border-yellow-400'
-                  : t.status === 'current'
-                  ? 'bg-green-50 border border-green-200'
-                  : 'bg-white border'
-              }`}
-            >
-              <div>
-                <span className="font-bold">#{t.token}</span>
-                <span className="ml-3">{t.patient_name}</span>
-              </div>
-              <span className={`text-xs px-2 py-1 rounded ${
-                t.status === 'current' ? 'bg-green-100 text-green-800' :
-                t.id === myToken.id ? 'bg-yellow-200 text-yellow-800' :
-                'bg-gray-100 text-gray-600'
-              }`}>
-                {t.status === 'current' ? 'Being seen' : t.id === myToken.id ? 'Your turn' : 'Waiting'}
-              </span>
+          <dl className="grid grid-cols-2 gap-x-lg gap-y-sm sm:grid-cols-3">
+            <div>
+              <dt className="label-mono">Position</dt>
+              <dd className="mt-3xs font-display text-lg font-semibold tnum">
+                {myPosition} <span className="text-sm font-normal text-graphite-dim">of {total}</span>
+              </dd>
             </div>
-          ))}
-      </div>
+            <div>
+              <dt className="label-mono">Payment</dt>
+              <dd className="mt-3xs font-display text-lg font-semibold">
+                {myToken.payment_status === 'paid' ? 'Paid' : 'Unpaid'}
+              </dd>
+            </div>
+            <div>
+              <dt className="label-mono">Room</dt>
+              <dd className="mt-3xs font-display text-lg font-semibold">{doctor?.room || '—'}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {isMyTurn && (
+          <p className="mt-md border-t border-graphite-2 pt-sm text-sm font-medium">
+            It&apos;s your turn — please head to {doctor?.room ? `Room ${doctor.room}` : 'the doctor\'s room'}.
+          </p>
+        )}
+      </section>
+
+      {myToken.payment_status !== 'paid' && (
+        <div className="mb-md">
+          <Notice tone="warn" title="Payment outstanding">
+            Your token is in the queue, but the fee is unpaid. Settle it before your turn to keep your place.{' '}
+            <Link className="link" to={`/patient/pay/${myToken.doctor_id}`}>
+              Pay now
+            </Link>
+          </Notice>
+        </div>
+      )}
+
+      <Panel title="Live queue" meta={`${activeQueue.length} active ${activeQueue.length === 1 ? 'token' : 'tokens'}`} flush>
+        <div className="overflow-x-auto">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Token</th>
+                <th>Patient</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeQueue.map(t => {
+                const mine = t.id === myToken.id
+                return (
+                  <tr key={t.id} className={mine ? 'row-mine' : t.status === 'current' ? 'row-focus' : ''}>
+                    <td className="token-id">#{t.token}</td>
+                    <td className={mine ? 'cell-strong' : ''}>
+                      {mine ? 'You' : t.patient_name}
+                    </td>
+                    <td>{mine && t.status !== 'current' ? <StatusChip tone="warn">Your token</StatusChip> : <QueueChip status={t.status} />}</td>
+                  </tr>
+                )
+              })}
+              {activeQueue.length === 0 && (
+                <tr>
+                  <td colSpan={3}>
+                    <EmptyState title="The queue is clear" hint="No active tokens for this doctor right now." />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
     </div>
   )
 }

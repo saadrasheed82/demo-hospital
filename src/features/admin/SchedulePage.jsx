@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { doctorsService, schedulesService } from '../../services/supabase'
-import { TEST_DOCTORS } from '../../data/seedDoctors'
+import { Button, EmptyState, Notice, PageHeader, Panel, SkeletonRows } from '../../components/ui'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -11,43 +11,18 @@ export default function SchedulePage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  // The subscribe callbacks need the current roster without re-subscribing.
+  const doctorsRef = useRef([])
 
   useEffect(() => {
-    const unsubDoctors = doctorsService.subscribe(setDoctors)
+    const unsubDoctors = doctorsService.subscribe(docs => {
+      doctorsRef.current = docs
+      setDoctors(docs)
+    })
 
-    const loadSchedules = async () => {
-      try {
-        const allSchedules = await schedulesService.getAll()
-        const byDoctor = {}
-        doctors.forEach(doc => {
-          byDoctor[doc.id] = WEEKDAYS.map(day => ({
-            day,
-            startTime: '09:00',
-            endTime: '17:00',
-            maxPatients: 20,
-          }))
-        })
-        allSchedules.forEach(s => {
-          if (!byDoctor[s.doctor_id]) {
-            byDoctor[s.doctor_id] = {}
-          }
-          if (Array.isArray(byDoctor[s.doctor_id])) {
-            const idx = byDoctor[s.doctor_id].findIndex(d => d.day === s.day)
-            if (idx !== -1) {
-              byDoctor[s.doctor_id][idx] = s
-            }
-          }
-        })
-        setSchedules(byDoctor)
-      } catch (err) {
-        setError(err.message)
-      }
-      setLoading(false)
-    }
-
-    const unsubSchedules = schedulesService.subscribe((allSchedules) => {
+    const buildFromDoctors = (docs, allSchedules) => {
       const byDoctor = {}
-      doctors.forEach(doc => {
+      docs.forEach(doc => {
         byDoctor[doc.id] = WEEKDAYS.map(day => ({
           day,
           startTime: '09:00',
@@ -56,19 +31,22 @@ export default function SchedulePage() {
         }))
       })
       allSchedules.forEach(s => {
-        if (!byDoctor[s.doctor_id]) {
-          byDoctor[s.doctor_id] = {}
-        }
-        if (Array.isArray(byDoctor[s.doctor_id])) {
-          const idx = byDoctor[s.doctor_id].findIndex(d => d.day === s.day)
-          if (idx !== -1) {
-            byDoctor[s.doctor_id][idx] = s
-          }
-        }
+        if (!Array.isArray(byDoctor[s.doctor_id])) return
+        const idx = byDoctor[s.doctor_id].findIndex(d => d.day === s.day)
+        if (idx !== -1) byDoctor[s.doctor_id][idx] = s
       })
-      setSchedules(byDoctor)
+      return byDoctor
+    }
+
+    const unsubSchedules = schedulesService.subscribe((allSchedules) => {
+      setSchedules(buildFromDoctors(doctorsRef.current, allSchedules))
       setLoading(false)
     })
+
+    schedulesService.getAll()
+      .then(all => setSchedules(buildFromDoctors(doctorsRef.current, all)))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false))
 
     return () => {
       unsubDoctors()
@@ -106,7 +84,7 @@ export default function SchedulePage() {
         }
       }
       await Promise.all(operations)
-      setSuccess('All schedules saved successfully')
+      setSuccess('All schedules saved.')
       setTimeout(() => setSuccess(null), 3000)
     } catch (err) {
       setError(err.message)
@@ -117,84 +95,107 @@ export default function SchedulePage() {
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-gray-500">Loading schedules...</p>
+      <div>
+        <PageHeader eyebrow="Administration" title="Schedule" />
+        <Panel title="Working hours">
+          <SkeletonRows rows={6} />
+        </Panel>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Schedule Management</h1>
-        <button
-          onClick={handleSaveAll}
-          disabled={saving}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {saving ? 'Saving...' : 'Save All Schedules'}
-        </button>
-      </div>
-
-      <p className="text-gray-600 mb-4">
-        Set daily working hours and max patients per slot per doctor.
-      </p>
+      <PageHeader
+        eyebrow="Administration"
+        title="Schedule"
+        meta="Set daily working hours and the patient cap per doctor."
+        actions={
+          <Button onClick={handleSaveAll} loading={saving} loadingLabel="Saving…">
+            Save all schedules
+          </Button>
+        }
+      />
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded mb-4">
-          {error}
+        <div className="mb-md">
+          <Notice tone="danger" title="Could not save schedules">{error}</Notice>
         </div>
       )}
       {success && (
-        <div className="bg-green-50 text-green-700 p-3 rounded mb-4">
-          {success}
+        <div className="mb-md">
+          <Notice tone="ok" title="Saved">{success}</Notice>
         </div>
       )}
 
-      <div className="mb-4">
-        <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">
-          ✅ Live data
-        </span>
-      </div>
-
-      <div className="space-y-4">
-        {doctors.map(doc => (
-          <div key={doc.id} className="bg-white p-4 rounded shadow">
-            <h3 className="font-bold">{doc.name} ({doc.specialty})</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
-              {WEEKDAYS.map((day, idx) => {
-                const d = schedules[doc.id]?.[idx] || { day, startTime: '09:00', endTime: '17:00', maxPatients: 20 }
-                return (
-                  <div key={day} className="border rounded p-3">
-                    <label className="text-sm font-medium text-gray-700 block mb-1">{day}</label>
-                    <input
-                      type="time"
-                      className="w-full p-1 border rounded text-sm mb-1"
-                      value={d.start_time || d.startTime || '09:00'}
-                      onChange={(e) => updateSchedule(doc.id, idx, 'startTime', e.target.value)}
-                    />
-                    <input
-                      type="time"
-                      className="w-full p-1 border rounded text-sm mb-1"
-                      value={d.end_time || d.endTime || '17:00'}
-                      onChange={(e) => updateSchedule(doc.id, idx, 'endTime', e.target.value)}
-                    />
-                    <input
-                      type="number"
-                      className="w-full p-1 border rounded text-sm"
-                      placeholder="Max patients"
-                      min="1"
-                      max="50"
-                      value={d.max_patients || d.maxPatients || 20}
-                      onChange={(e) => updateSchedule(doc.id, idx, 'maxPatients', parseInt(e.target.value) || 20)}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+      {doctors.length === 0 ? (
+        <div className="panel">
+          <EmptyState
+            title="No doctors to schedule"
+            hint="Add a doctor login first, then set their weekly hours here."
+          />
+        </div>
+      ) : (
+        <div className="grid gap-md">
+          {doctors.map(doc => (
+            <Panel key={doc.id} title={doc.name} meta={doc.specialty} flush>
+              <div className="overflow-x-auto">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Day</th>
+                      <th>Starts</th>
+                      <th>Ends</th>
+                      <th>Max patients</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {WEEKDAYS.map((day, idx) => {
+                      const d = schedules[doc.id]?.[idx] || {
+                        day, startTime: '09:00', endTime: '17:00', maxPatients: 20,
+                      }
+                      return (
+                        <tr key={day}>
+                          <td className="cell-strong">{day}</td>
+                          <td>
+                            <input
+                              type="time"
+                              aria-label={`${day} start time`}
+                              className="input tnum w-32"
+                              value={d.start_time || d.startTime || '09:00'}
+                              onChange={(e) => updateSchedule(doc.id, idx, 'startTime', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="time"
+                              aria-label={`${day} end time`}
+                              className="input tnum w-32"
+                              value={d.end_time || d.endTime || '17:00'}
+                              onChange={(e) => updateSchedule(doc.id, idx, 'endTime', e.target.value)}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              type="number"
+                              min="1"
+                              max="50"
+                              aria-label={`${day} max patients`}
+                              className="input tnum w-28"
+                              value={d.max_patients || d.maxPatients || 20}
+                              onChange={(e) => updateSchedule(doc.id, idx, 'maxPatients', parseInt(e.target.value) || 20)}
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

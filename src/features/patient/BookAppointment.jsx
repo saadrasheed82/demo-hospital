@@ -5,6 +5,7 @@ import { doctorsService, patientsService, appointmentsService, tokensService } f
 import { generateNextToken } from '../../shared/utils/tokenGenerator'
 import { TEST_DOCTORS } from '../../data/seedDoctors'
 import { isSupabaseActive } from '../../supabase'
+import { Button, Field, Notice, PageHeader, Panel, SkeletonPanel } from '../../components/ui'
 
 export default function BookAppointment() {
   const { doctorId } = useParams()
@@ -75,104 +76,159 @@ export default function BookAppointment() {
     }
   }
 
+  /* ── booked: the token is the whole page ──────────────────────────── */
   if (confirmation) {
     return (
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Booking Confirmed</h1>
-        <div className="bg-green-50 border border-green-200 rounded p-6 text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-xl font-bold text-green-800">Appointment Booked!</h2>
-          <div className="mt-4 space-y-2">
-            <p className="text-gray-600">Token Number:</p>
-            <p className="text-4xl font-bold text-green-600">#{confirmation.token}</p>
-            <p className="text-gray-600">Doctor: {doctor.name}</p>
-            <p className="text-gray-600">Specialty: {doctor.specialty}</p>
-            <p className="text-gray-600">Fee: ${doctor.fee} — <span className="text-red-600">unpaid</span></p>
+      <div className="mx-auto max-w-lg">
+        <PageHeader eyebrow="Patient portal" title="Booking confirmed" />
+
+        <section className="graphite p-md text-center lg:p-lg">
+          <p className="label-mono">Your token</p>
+          <p className="mt-2xs font-mono text-5xl font-semibold leading-none tracking-tight">
+            #{confirmation.token}
+          </p>
+          <p className="mt-sm text-sm text-graphite-dim">
+            {doctor.name} · {doctor.specialty}
+          </p>
+        </section>
+
+        <Panel title="Appointment details" className="mt-md">
+          <dl className="space-y-xs text-sm">
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Doctor</dt>
+              <dd className="font-medium text-ink">{doctor.name}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Specialty</dt>
+              <dd className="font-medium text-ink">{doctor.specialty}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Room</dt>
+              <dd className="font-medium text-ink">{doctor.room || '—'}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Fee</dt>
+              <dd className="font-medium tnum text-ink">
+                ${doctor.fee} · <span className="text-warn">unpaid</span>
+              </dd>
+            </div>
+          </dl>
+
+          <div className="mt-md flex flex-wrap gap-2xs border-t border-rule pt-md">
+            <Button onClick={() => navigate(`/patient/pay/${doctor.id}`)}>
+              Pay ${doctor.fee} now
+            </Button>
+            <Button variant="secondary" onClick={() => navigate('/patient/booked')}>
+              Track my queue
+            </Button>
           </div>
-          <button
-            onClick={() => navigate(`/patient/pay/${doctor.id}`)}
-            className="mt-6 w-full bg-green-600 text-white py-2 rounded"
-          >
-            Pay ${doctor.fee} Now
-          </button>
-          <button
-            onClick={() => navigate('/patient/booked')}
-            className="mt-2 w-full bg-blue-600 text-white py-2 rounded"
-          >
-            Track My Queue
-          </button>
-        </div>
+
+          {!isSupabaseActive && (
+            <p className="mt-sm text-xs text-ink-3">Demo mode — this booking was not saved.</p>
+          )}
+        </Panel>
       </div>
     )
   }
 
   if (!doctor) {
-    return <p className="text-gray-500">Loading doctor…</p>
+    return (
+      <div className="mx-auto max-w-3xl">
+        <PageHeader eyebrow="Patient portal" title="Book appointment" />
+        <SkeletonPanel label="Loading doctor" />
+      </div>
+    )
   }
 
+  /* ── booking form + running summary ───────────────────────────────── */
   return (
-    <div className="max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Book Appointment</h1>
-      <div className="bg-white rounded shadow p-6">
-        <div className="text-center mb-4">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-            <span className="text-blue-600 font-bold text-2xl">{doctor.name[0]}</span>
-          </div>
-          <h2 className="text-xl font-bold">{doctor.name}</h2>
-          <p className="text-gray-600">{doctor.specialty}</p>
-          <p className="font-semibold text-lg mt-1">${doctor.fee}</p>
-        </div>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        eyebrow="Patient portal"
+        title={`Book with ${doctor.name}`}
+        meta="You will receive a token for today's queue as soon as you confirm."
+      />
 
-        <div className="border-t pt-4 space-y-3">
-          <div>
-            <label className="block text-sm text-gray-600">Reason for Visit</label>
-            <input
-              type="text"
-              placeholder="e.g., Routine checkup, Chest pain"
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600">Your Name</label>
-            <input
-              type="text"
-              placeholder="Full name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-600">Phone Number</label>
-            <input
-              type="tel"
-              placeholder="+92 300 1234567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-        </div>
+      <div className="grid gap-md lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <Panel title="Visit details">
+          <div className="space-y-sm">
+            <Field
+              label="Reason for visit"
+              htmlFor="reason"
+              hint="A short phrase helps the doctor prepare — e.g. chest pain, routine checkup."
+            >
+              <input
+                id="reason"
+                type="text"
+                className="input"
+                placeholder="Routine checkup"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+            </Field>
 
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded my-3 text-sm">{error}</div>
-        )}
+            <Field label="Your name" htmlFor="name" hint="Used for your patient record and queue display.">
+              <input
+                id="name"
+                type="text"
+                autoComplete="name"
+                className="input"
+                placeholder="Full name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </Field>
 
-        <button
-          onClick={handleBook}
-          disabled={saving}
-          className="mt-6 w-full bg-blue-600 text-white py-3 rounded font-semibold hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {saving ? 'Booking…' : `Confirm Booking — Pay $${doctor.fee}`}
-        </button>
+            <Field label="Phone number" htmlFor="phone">
+              <input
+                id="phone"
+                type="tel"
+                autoComplete="tel"
+                className="input"
+                placeholder="+92 300 1234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+              />
+            </Field>
 
-        {!isSupabaseActive && (
-          <p className="text-xs text-gray-400 text-center mt-3">
-            🎭 Demo mode — booking won't be saved without a database connection.
-          </p>
-        )}
+            {error && <Notice tone="danger">{error}</Notice>}
+
+            <div className="border-t border-rule pt-sm">
+              <Button block onClick={handleBook} loading={saving} loadingLabel="Booking…">
+                Confirm booking — ${doctor.fee}
+              </Button>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel title="Summary" quiet className="lg:sticky lg:top-md lg:self-start">
+          <dl className="space-y-xs text-sm">
+            <div>
+              <dt className="label-mono">Doctor</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor.name}</dd>
+            </div>
+            <div>
+              <dt className="label-mono">Specialty</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor.specialty}</dd>
+            </div>
+            <div>
+              <dt className="label-mono">Room</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor.room || '—'}</dd>
+            </div>
+            <div>
+              <dt className="label-mono">Hours</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor.hours || '—'}</dd>
+            </div>
+            <div className="border-t border-rule pt-xs">
+              <dt className="label-mono">Fee due</dt>
+              <dd className="mt-3xs font-display text-lg font-semibold tnum text-ink">${doctor.fee}</dd>
+            </div>
+          </dl>
+
+          {!isSupabaseActive && (
+            <p className="mt-sm text-xs text-ink-3">Demo mode — booking will not be saved.</p>
+          )}
+        </Panel>
       </div>
     </div>
   )

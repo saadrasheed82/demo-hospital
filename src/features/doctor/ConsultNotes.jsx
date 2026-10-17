@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { consultNotesService } from '../../services/supabase'
 import { isSupabaseActive } from '../../supabase'
+import { Button, Field, Modal, Notice } from '../../components/ui'
 
 export function ConsultNotes({ token, doctorId, onClose }) {
   const [notes, setNotes] = useState('')
@@ -38,83 +39,74 @@ export function ConsultNotes({ token, doctorId, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded shadow-md w-96 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">
-          Consult — Token #{token.token} ({token.name})
-        </h2>
+    <Modal
+      title={`Consult notes — token #${token.token}`}
+      meta={token.name}
+      onClose={onClose}
+      width="max-w-lg"
+    >
+      {saved ? (
+        <Notice tone="ok" title="Consult saved">
+          The notes were filed against token #{token.token}.
+        </Notice>
+      ) : (
+        <div className="space-y-sm">
+          <Field label="Outcome" htmlFor="consult-status">
+            <select
+              id="consult-status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="input"
+            >
+              <option value="completed">Completed</option>
+              <option value="rescheduled">Rescheduled</option>
+              <option value="referral">Referred</option>
+            </select>
+          </Field>
 
-        {saved ? (
-          <div className="text-center py-6">
-            <div className="text-3xl mb-2">✅</div>
-            <p className="text-green-700 font-semibold">Consult saved</p>
+          <Field label="Diagnosis" htmlFor="consult-diagnosis">
+            <input
+              id="consult-diagnosis"
+              type="text"
+              className="input"
+              placeholder="Enter diagnosis"
+              value={diagnosis}
+              onChange={(e) => setDiagnosis(e.target.value)}
+            />
+          </Field>
+
+          <Field label="Clinical notes" htmlFor="consult-notes">
+            <textarea
+              id="consult-notes"
+              className="input"
+              placeholder="Observations, medication, instructions for the patient…"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </Field>
+
+          <label className="flex cursor-pointer items-center gap-2xs text-sm text-ink-2">
+            <input
+              type="checkbox"
+              checked={followUp}
+              onChange={(e) => setFollowUp(e.target.checked)}
+              className="size-4 accent-[oklch(58%_0.20_256)]"
+            />
+            Follow-up required
+          </label>
+
+          {error && <Notice tone="danger">{error}</Notice>}
+
+          <div className="flex flex-wrap justify-end gap-2xs border-t border-rule pt-sm">
+            <Button variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} loading={saving} loadingLabel="Saving…">
+              Save consult
+            </Button>
           </div>
-        ) : (
-          <>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Consult Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="completed">Completed</option>
-                  <option value="rescheduled">Rescheduled</option>
-                  <option value="referral">Referred</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Notes</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-2 border rounded h-24"
-                  placeholder="Add clinical notes..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Diagnosis</label>
-                <input
-                  type="text"
-                  value={diagnosis}
-                  onChange={(e) => setDiagnosis(e.target.value)}
-                  className="w-full p-2 border rounded"
-                  placeholder="Enter diagnosis..."
-                />
-              </div>
-
-              <div>
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={followUp}
-                    onChange={(e) => setFollowUp(e.target.checked)}
-                  />
-                  Follow-up required
-                </label>
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-700 p-2 rounded my-3 text-sm">{error}</div>
-            )}
-
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
-              <button
-                onClick={handleSubmit}
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-              >
-                {saving ? 'Saving…' : 'Save Consult'}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </Modal>
   )
 }

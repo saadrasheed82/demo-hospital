@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { doctorsService } from '../../services/supabase'
 import { TEST_SPECIALTIES } from '../../data/seedDoctors'
+import { Button, EmptyState, Field, Modal, Notice, PageHeader, Panel, SkeletonRows, StatusChip } from '../../components/ui'
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState([])
@@ -32,81 +33,81 @@ export default function DoctorsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="p-4 text-center">
-        <p className="text-gray-500">Loading doctors...</p>
-      </div>
-    )
-  }
-
   return (
     <div>
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Doctors Management</h1>
-        <span className="text-sm text-gray-600">
-          Add or remove doctors from <NavLink to="/admin/team-logins" className="text-blue-600 hover:underline">Team Logins</NavLink>
-        </span>
-      </div>
+      <PageHeader
+        eyebrow="Administration"
+        title="Doctors"
+        meta="Fees, rooms and working hours for every doctor on the roster."
+        actions={
+          <Link className="btn btn--secondary" to="/admin/team-logins">
+            Team logins
+          </Link>
+        }
+      />
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3 rounded mb-4">
-          {error}
+        <div className="mb-md">
+          <Notice tone="danger" title="Could not save changes">{error}</Notice>
         </div>
       )}
 
-      <div className="mb-4">
-        <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">
-          ✅ Live data
-        </span>
-      </div>
-
-      <table className="w-full border-collapse bg-white shadow rounded">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-3 text-left">Name</th>
-            <th className="p-3 text-left">Specialty</th>
-            <th className="p-3 text-left">Fee</th>
-            <th className="p-3 text-left">Room</th>
-            <th className="p-3 text-left">Hours</th>
-            <th className="p-3 text-left">Login</th>
-            <th className="p-3 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {doctors.map(doc => (
-            <tr key={doc.id} className="border-t">
-              <td className="p-3">{doc.name}</td>
-              <td className="p-3">{doc.specialty}</td>
-              <td className="p-3">${doc.fee}</td>
-              <td className="p-3">{doc.room}</td>
-              <td className="p-3">{doc.hours}</td>
-              <td className="p-3">
-                {doc.email ? (
-                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">✓ {doc.email}</span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">No login — claim in Team Logins</span>
-                )}
-              </td>
-              <td className="p-3">
-                <button
-                  onClick={() => setEditingDoctor(doc)}
-                  className="text-blue-600 hover:text-blue-800"
-                >
-                  Edit
-                </button>
-              </td>
-            </tr>
-          ))}
-          {doctors.length === 0 && (
-            <tr>
-              <td colSpan={7} className="p-4 text-center text-gray-500">
-                No doctors found. Create a doctor login on the Team Logins page to add one.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <Panel title="Roster" meta={`${doctors.length} ${doctors.length === 1 ? 'doctor' : 'doctors'}`} flush>
+        {loading ? (
+          <div className="panel-body">
+            <SkeletonRows rows={6} />
+          </div>
+        ) : doctors.length === 0 ? (
+          <EmptyState
+            title="No doctors on the roster"
+            hint="Create a doctor login on the Team logins page to add a record here."
+            action={
+              <Link className="btn btn--primary" to="/admin/team-logins">
+                Go to team logins
+              </Link>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Specialty</th>
+                  <th>Fee</th>
+                  <th>Room</th>
+                  <th>Hours</th>
+                  <th>Login</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {doctors.map(doc => (
+                  <tr key={doc.id}>
+                    <td className="cell-strong">{doc.name}</td>
+                    <td>{doc.specialty}</td>
+                    <td className="tnum">${doc.fee}</td>
+                    <td>{doc.room || '—'}</td>
+                    <td>{doc.hours || '—'}</td>
+                    <td>
+                      {doc.email ? (
+                        <StatusChip tone="ok">{doc.email}</StatusChip>
+                      ) : (
+                        <StatusChip tone="warn">No login</StatusChip>
+                      )}
+                    </td>
+                    <td className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingDoctor(doc)}>
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
 
       {editingDoctor && (
         <DoctorForm
@@ -132,55 +133,58 @@ function DoctorForm({ doctor, specialties, loading, onClose, onSave }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded shadow-md w-80">
-        <h2 className="text-xl font-bold mb-4">Edit {doctor.name}</h2>
-        <div className="space-y-3">
+    <Modal title={`Edit ${doctor.name}`} meta={doctor.email || 'No login linked'} onClose={onClose}>
+      <div className="space-y-sm">
+        <Field label="Specialty" htmlFor="doctor-specialty">
           <select
+            id="doctor-specialty"
             value={specialty}
             onChange={(e) => setSpecialty(e.target.value)}
-            className="w-full p-2 border rounded"
+            className="input"
           >
             {specialties.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+        </Field>
+
+        <Field label="Consultation fee" htmlFor="doctor-fee" hint="Charged when the patient books a token.">
           <input
+            id="doctor-fee"
             type="number"
-            placeholder="Fee ($)"
+            min="0"
+            className="input"
+            placeholder="e.g. 500"
             value={fee}
             onChange={(e) => setFee(e.target.value)}
-            className="w-full p-2 border rounded"
           />
+        </Field>
+
+        <Field label="Room" htmlFor="doctor-room">
           <input
+            id="doctor-room"
             type="text"
-            placeholder="Room"
+            className="input"
+            placeholder="e.g. 204"
             value={room}
             onChange={(e) => setRoom(e.target.value)}
-            className="w-full p-2 border rounded"
           />
+        </Field>
+
+        <Field label="Working hours" htmlFor="doctor-hours">
           <input
+            id="doctor-hours"
             type="text"
-            placeholder="Working Hours (e.g., 9AM-5PM)"
+            className="input"
+            placeholder="e.g. 9:00–17:00"
             value={hours}
             onChange={(e) => setHours(e.target.value)}
-            className="w-full p-2 border rounded"
           />
-        </div>
-        <div className="flex justify-end gap-2 mt-4">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {loading ? 'Saving...' : 'Save'}
-          </button>
+        </Field>
+
+        <div className="flex flex-wrap justify-end gap-2xs border-t border-rule pt-sm">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit} loading={loading} loadingLabel="Saving…">Save</Button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { doctorsService, patientsService, appointmentsService, tokensService } from '../../services/supabase'
 import { generateNextToken } from '../../shared/utils/tokenGenerator'
+import { Button, Field, Notice, PageHeader, Panel } from '../../components/ui'
 
 export default function BookAppointment() {
   const [doctors, setDoctors] = useState([])
@@ -96,136 +97,204 @@ export default function BookAppointment() {
     }
   }
 
+  /* ── booked ───────────────────────────────────────────────────────── */
   if (confirmation) {
     return (
-      <div className="max-w-2xl">
-        <div className="bg-green-50 border border-green-200 rounded p-6 text-center">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-xl font-bold text-green-800 mb-4">Appointment Booked!</h2>
-          <div className="space-y-2 mb-6">
-            <p className="text-gray-600">Token Number</p>
-            <p className="text-4xl font-bold text-green-600">#{confirmation.token}</p>
-            <p className="text-gray-600">Doctor: {confirmation.doctor?.name}</p>
-            <p className="text-gray-600">Patient: {confirmation.patientName}</p>
-            <p className="text-gray-600">Fee: ${confirmation.fee}</p>
+      <div className="mx-auto max-w-lg">
+        <PageHeader eyebrow="Counter desk" title="Appointment booked" />
+
+        <section className="graphite p-md text-center lg:p-lg">
+          <p className="label-mono">Issued token</p>
+          <p className="mt-2xs font-mono text-5xl font-semibold leading-none tracking-tight">
+            #{confirmation.token}
+          </p>
+          <p className="mt-sm text-sm text-graphite-dim">{confirmation.patientName}</p>
+        </section>
+
+        <Panel title="Visit details" className="mt-md">
+          <dl className="space-y-xs text-sm">
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Doctor</dt>
+              <dd className="font-medium text-ink">{confirmation.doctor?.name}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Patient</dt>
+              <dd className="font-medium text-ink">{confirmation.patientName}</dd>
+            </div>
+            <div className="flex justify-between gap-sm">
+              <dt className="text-ink-3">Fee</dt>
+              <dd className="font-medium tnum text-ink">
+                ${confirmation.fee} · <span className="text-warn">unpaid</span>
+              </dd>
+            </div>
+          </dl>
+
+          <div className="mt-md border-t border-rule pt-md">
+            <Button onClick={handleReset}>Book another patient</Button>
           </div>
-          <button
-            onClick={handleReset}
-            className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
-          >
-            Book Another
-          </button>
-        </div>
+        </Panel>
       </div>
     )
   }
 
+  /* ── form ─────────────────────────────────────────────────────────── */
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Book New Appointment</h1>
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        eyebrow="Counter desk"
+        title="Book a walk-in"
+        meta="Register the patient, pick the doctor, and issue today's token."
+      />
 
-      <div className="bg-white p-6 rounded shadow">
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Select Doctor</label>
-          <select
-            value={selectedDoctor}
-            onChange={(e) => setSelectedDoctor(e.target.value)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">Choose doctor</option>
-            {doctors.map(d => (
-              <option key={d.id} value={d.id}>{d.name} — {d.specialty} (${d.fee})</option>
-            ))}
-          </select>
-        </div>
+      <div className="grid gap-md lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <Panel title="Appointment">
+          <div className="space-y-sm">
+            <Field label="Doctor" htmlFor="book-doctor">
+              <select
+                id="book-doctor"
+                value={selectedDoctor}
+                onChange={(e) => setSelectedDoctor(e.target.value)}
+                className="input"
+              >
+                <option value="">Choose a doctor</option>
+                {doctors.map(d => (
+                  <option key={d.id} value={d.id}>{d.name} — {d.specialty} (${d.fee})</option>
+                ))}
+              </select>
+            </Field>
 
-        <div className="mb-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              checked={!isNewPatient}
-              onChange={() => setIsNewPatient(false)}
-            />
-            Existing Patient
-          </label>
-          <label className="flex items-center gap-2 mt-1">
-            <input
-              type="radio"
-              checked={isNewPatient}
-              onChange={() => setIsNewPatient(true)}
-            />
-            New Patient
-          </label>
-        </div>
+            {/* Patient type — a segmented control, not a bare radio pair. */}
+            <fieldset>
+              <legend className="field-label">Patient</legend>
+              <div className="inline-flex rounded-control border border-rule-2 p-3xs">
+                {[
+                  [false, 'Existing patient'],
+                  [true, 'New patient'],
+                ].map(([value, label]) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setIsNewPatient(value)}
+                    aria-pressed={isNewPatient === value}
+                    className={`rounded-[4px] px-xs py-2xs text-sm transition-colors duration-150 ease-out ${
+                      isNewPatient === value
+                        ? 'bg-accent-soft font-medium text-accent'
+                        : 'text-ink-2 hover:text-ink'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
 
-        {!isNewPatient ? (
-          <div className="mb-4">
-            <select
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-              className="w-full p-2 border rounded"
+            {!isNewPatient ? (
+              <Field label="Select patient" htmlFor="book-patient">
+                <select
+                  id="book-patient"
+                  value={selectedPatient}
+                  onChange={(e) => setSelectedPatient(e.target.value)}
+                  className="input"
+                >
+                  <option value="">Select an existing patient</option>
+                  {patients.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.age}) — {p.phone}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <div className="space-y-sm">
+                <Field label="Patient name" htmlFor="new-name">
+                  <input
+                    id="new-name"
+                    type="text"
+                    className="input"
+                    placeholder="Full name"
+                    value={newPatientName}
+                    onChange={(e) => setNewPatientName(e.target.value)}
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-xs">
+                  <Field label="Age" htmlFor="new-age">
+                    <input
+                      id="new-age"
+                      type="number"
+                      min="0"
+                      className="input"
+                      placeholder="e.g. 34"
+                      value={newPatientAge}
+                      onChange={(e) => setNewPatientAge(e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Phone" htmlFor="new-phone">
+                    <input
+                      id="new-phone"
+                      type="tel"
+                      className="input"
+                      placeholder="+92 300 1234567"
+                      value={newPatientPhone}
+                      onChange={(e) => setNewPatientPhone(e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </div>
+            )}
+
+            <Field
+              label="Reason / condition"
+              htmlFor="book-condition"
+              hint="Shown to the doctor and on the queue board."
             >
-              <option value="">Select patient</option>
-              {patients.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.age}) — {p.phone}
-                </option>
-              ))}
-            </select>
+              <input
+                id="book-condition"
+                type="text"
+                className="input"
+                placeholder="e.g. Chest pain, routine checkup"
+                value={condition}
+                onChange={(e) => setCondition(e.target.value)}
+              />
+            </Field>
+
+            {error && <Notice tone="danger">{error}</Notice>}
+
+            <div className="border-t border-rule pt-sm">
+              <Button block onClick={handleBook} loading={saving} loadingLabel="Booking…">
+                Confirm booking
+              </Button>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-3 mb-4">
-            <input
-              type="text"
-              placeholder="Patient Name"
-              value={newPatientName}
-              onChange={(e) => setNewPatientName(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-            <input
-              type="number"
-              placeholder="Age"
-              value={newPatientAge}
-              onChange={(e) => setNewPatientAge(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-            <input
-              type="text"
-              placeholder="Phone"
-              value={newPatientPhone}
-              onChange={(e) => setNewPatientPhone(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
-          </div>
-        )}
+        </Panel>
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Reason / Condition</label>
-          <input
-            type="text"
-            placeholder="e.g., Chest pain, Routine checkup"
-            value={condition}
-            onChange={(e) => setCondition(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
-        </div>
-
-        <div className="bg-gray-50 p-3 rounded mb-4">
-          <p><strong>Doctor:</strong> {doctor?.name || '—'}</p>
-          <p><strong>Fee:</strong> ${doctor?.fee ?? 0}</p>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 text-red-700 p-3 rounded mb-4">{error}</div>
-        )}
-
-        <button
-          onClick={handleBook}
-          disabled={saving}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
-        >
-          {saving ? 'Saving...' : 'Confirm Booking'}
-        </button>
+        <Panel title="Summary" quiet className="lg:sticky lg:top-md lg:self-start">
+          <dl className="space-y-xs text-sm">
+            <div>
+              <dt className="label-mono">Doctor</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor?.name || '—'}</dd>
+            </div>
+            <div>
+              <dt className="label-mono">Specialty</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor?.specialty || '—'}</dd>
+            </div>
+            <div>
+              <dt className="label-mono">Room</dt>
+              <dd className="mt-3xs font-medium text-ink">{doctor?.room || '—'}</dd>
+            </div>
+            <div>
+              <dt className="label-mono">Patient</dt>
+              <dd className="mt-3xs font-medium text-ink">
+                {isNewPatient ? newPatientName || 'New patient' : patient?.name || '—'}
+              </dd>
+            </div>
+            <div className="border-t border-rule pt-xs">
+              <dt className="label-mono">Fee due</dt>
+              <dd className="mt-3xs font-display text-lg font-semibold tnum text-ink">
+                ${doctor?.fee ?? 0}
+              </dd>
+            </div>
+          </dl>
+        </Panel>
       </div>
     </div>
   )

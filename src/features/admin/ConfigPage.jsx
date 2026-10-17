@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { settingsService, seedSupabase } from '../../services/supabase'
 import { isSupabaseActive } from '../../supabase'
+import { Button, Field, Notice, PageHeader, Panel, SkeletonRows, StatusChip } from '../../components/ui'
 
 export default function ConfigPage() {
   const [status, setStatus] = useState(null)
@@ -35,13 +36,13 @@ export default function ConfigPage() {
       const results = await seedSupabase()
       setStatus({
         type: 'success',
-        message: `Seeded Supabase data`,
+        message: 'Sample data seeded',
         results: [
-          { role: 'Doctors', created: true, email: `${results.doctors} doctors` },
-          { role: 'Staff', created: true, email: `${results.staff} staff` },
-          { role: 'Patients', created: true, email: `${results.patients} patients` },
-          { role: 'Settings', created: true, email: `${results.settings} settings` },
-        ]
+          { role: 'Doctors', detail: `${results.doctors} rows` },
+          { role: 'Staff', detail: `${results.staff} rows` },
+          { role: 'Patients', detail: `${results.patients} rows` },
+          { role: 'Settings', detail: `${results.settings} rows` },
+        ],
       })
     } catch (err) {
       setStatus({ type: 'error', message: err.message })
@@ -65,116 +66,125 @@ export default function ConfigPage() {
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-gray-500">Loading configuration...</p>
+      <div>
+        <PageHeader eyebrow="Administration" title="Configuration" />
+        <Panel title="Hospital info">
+          <SkeletonRows rows={3} />
+        </Panel>
       </div>
     )
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">System Configuration</h1>
+      <PageHeader
+        eyebrow="Administration"
+        title="Configuration"
+        meta="The hospital's name and contact details, and the database connection."
+      />
 
       {status && (
-        <div className={`mb-4 p-3 rounded ${
-          status.type === 'success'
-            ? 'bg-green-50 text-green-700'
-            : 'bg-red-50 text-red-700'
-        }`}>
-          <p>{status.message}</p>
-          {status.results?.map((r, i) => (
-            <p key={i} className="text-sm mt-1">
-              • {r.role}: {r.email} {r.created ? '✅' : 'already exists ⚠️'}
-            </p>
-          ))}
+        <div className="mb-md">
+          <Notice
+            tone={status.type === 'success' ? 'ok' : 'danger'}
+            title={status.message}
+          >
+            {status.results && (
+              <dl className="mt-2xs grid grid-cols-2 gap-x-sm gap-y-3xs sm:grid-cols-4">
+                {status.results.map((r) => (
+                  <div key={r.role}>
+                    <dt className="label-mono">{r.role}</dt>
+                    <dd className="font-medium tnum text-ink">{r.detail}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </Notice>
         </div>
       )}
 
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <h2 className="text-lg font-semibold mb-3">Supabase Status</h2>
-        <p className={`font-mono ${isSupabaseActive ? 'text-green-600' : 'text-red-600'}`}>
-          {isSupabaseActive ? '✅ Connected to Supabase' : '⚠️ Demo mode (Supabase not configured)'}
-        </p>
-        <p className="text-xs text-gray-500 mt-1">
-          Project: qamnxnqkzjziqpnhlrhm
-        </p>
-      </div>
+      <div className="grid gap-md lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Panel title="Hospital info" meta="Shown in the admin dashboard header.">
+          <div className="space-y-sm">
+            <Field label="Hospital name" htmlFor="cfg-name">
+              <input
+                id="cfg-name"
+                type="text"
+                className="input"
+                placeholder="Hospital name"
+                value={hospitalInfo.name}
+                onChange={(e) => setHospitalInfo({ ...hospitalInfo, name: e.target.value })}
+                disabled={!isSupabaseActive || savingInfo}
+              />
+            </Field>
 
-      <div className="bg-white p-6 rounded shadow mb-6">
-        <h2 className="text-lg font-semibold mb-3">Hospital Info</h2>
-        <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Hospital Name"
-            value={hospitalInfo.name}
-            onChange={(e) => setHospitalInfo({ ...hospitalInfo, name: e.target.value })}
-            className="w-full p-2 border rounded"
-            disabled={!isSupabaseActive || savingInfo}
-          />
-          <input
-            type="text"
-            placeholder="Address"
-            value={hospitalInfo.address}
-            onChange={(e) => setHospitalInfo({ ...hospitalInfo, address: e.target.value })}
-            className="w-full p-2 border rounded"
-            disabled={!isSupabaseActive || savingInfo}
-          />
-          <input
-            type="text"
-            placeholder="Phone"
-            value={hospitalInfo.phone}
-            onChange={(e) => setHospitalInfo({ ...hospitalInfo, phone: e.target.value })}
-            className="w-full p-2 border rounded"
-            disabled={!isSupabaseActive || savingInfo}
-          />
-        </div>
-        <button
-          onClick={handleSaveInfo}
-          disabled={!isSupabaseActive || savingInfo}
-          className={`mt-4 text-white px-6 py-2 rounded ${
-            !isSupabaseActive
-              ? 'bg-gray-400 cursor-not-allowed'
-              : savingInfo
-              ? 'bg-gray-400'
-              : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          {savingInfo ? 'Saving...' : 'Save Configuration'}
-        </button>
-        {!isSupabaseActive && (
-          <p className="text-xs text-gray-500 mt-2">
-            Save is disabled — connect Supabase to persist configuration.
-          </p>
-        )}
-      </div>
+            <Field label="Address" htmlFor="cfg-address">
+              <input
+                id="cfg-address"
+                type="text"
+                className="input"
+                placeholder="Street, district"
+                value={hospitalInfo.address}
+                onChange={(e) => setHospitalInfo({ ...hospitalInfo, address: e.target.value })}
+                disabled={!isSupabaseActive || savingInfo}
+              />
+            </Field>
 
-      <div className="bg-white p-6 rounded shadow">
-        <h2 className="text-lg font-semibold mb-4">Demo Setup</h2>
+            <Field label="Phone" htmlFor="cfg-phone">
+              <input
+                id="cfg-phone"
+                type="tel"
+                className="input"
+                placeholder="+92 300 1234567"
+                value={hospitalInfo.phone}
+                onChange={(e) => setHospitalInfo({ ...hospitalInfo, phone: e.target.value })}
+                disabled={!isSupabaseActive || savingInfo}
+              />
+            </Field>
 
-        <div>
-          <button
-            onClick={handleSeedDb}
-            disabled={seedingDb || !isSupabaseActive}
-            className={`text-white px-4 py-2 rounded text-sm ${
-              seedingDb || !isSupabaseActive
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-700'
-            }`}
-          >
-            {seedingDb ? 'Seeding...' : 'Seed Supabase Data'}
-          </button>
-          <p className="text-xs text-gray-500 mt-1">
-            Populates Supabase tables with doctors, staff, patients, schedules, and settings.
-          </p>
-        </div>
-
-        {!isSupabaseActive && (
-          <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded p-3">
-            <p className="text-yellow-700 text-sm">
-              ⚠️ Supabase is not configured. Demo buttons create users in mock mode only.
-            </p>
+            <div className="border-t border-rule pt-sm">
+              <Button
+                onClick={handleSaveInfo}
+                disabled={!isSupabaseActive}
+                loading={savingInfo}
+                loadingLabel="Saving…"
+              >
+                Save configuration
+              </Button>
+              {!isSupabaseActive && (
+                <p className="field-hint">Saving is disabled until a database is connected.</p>
+              )}
+            </div>
           </div>
-        )}
+        </Panel>
+
+        <div className="grid gap-md lg:content-start">
+          <Panel title="Database">
+            <StatusChip tone={isSupabaseActive ? 'ok' : 'danger'}>
+              {isSupabaseActive ? 'Connected' : 'Not configured'}
+            </StatusChip>
+            <p className="mt-sm text-sm text-ink-3">
+              {isSupabaseActive
+                ? 'Reads and writes go to the live project. Sample data is only needed on a fresh database.'
+                : 'Demo mode is active. Data lives in memory and is lost on reload.'}
+            </p>
+          </Panel>
+
+          <Panel title="Demo setup" meta="Populates doctors, staff, patients and settings.">
+            <Button
+              variant="secondary"
+              onClick={handleSeedDb}
+              disabled={!isSupabaseActive}
+              loading={seedingDb}
+              loadingLabel="Seeding…"
+            >
+              Seed sample data
+            </Button>
+            <p className="field-hint">
+              Only run this against an empty database — it does not clear existing rows.
+            </p>
+          </Panel>
+        </div>
       </div>
     </div>
   )

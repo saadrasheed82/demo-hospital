@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { doctorsService, patientsService, appointmentsService, schedulesService, settingsService } from '../../services/supabase'
-import { TEST_DOCTORS } from '../../data/seedDoctors'
-import { TEST_PATIENTS } from '../../data/seedPatients'
 import { Link } from 'react-router-dom'
+import { doctorsService, patientsService, appointmentsService, schedulesService, settingsService } from '../../services/supabase'
+import { Notice, PageHeader, Panel, SkeletonRows, Stat, StatRow } from '../../components/ui'
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -72,89 +71,99 @@ export default function AdminDashboard() {
     setStats(prev => ({ ...prev, patients: patients.length }))
   }
 
-  const statCards = [
-    { label: 'Doctors', value: stats.doctors, icon: '👨‍⚕️', color: 'blue', link: '/admin/doctors' },
-    { label: 'Patients', value: stats.patients, icon: '👥', color: 'green', link: '/admin/staff' },
-    { label: "Today's Appointments", value: stats.todayAppointments, icon: '📅', color: 'yellow', link: '/admin/analytics' },
-    { label: 'Revenue Today', value: `$${stats.revenue}`, icon: '💰', color: 'purple', link: '/admin/analytics' },
+  const actions = [
+    { to: '/admin/doctors', label: 'Doctors', hint: 'Review fees, rooms and working hours' },
+    { to: '/admin/team-logins', label: 'Team logins', hint: 'Create staff and doctor accounts' },
+    { to: '/admin/schedule', label: 'Schedule', hint: 'Set daily hours and patient caps' },
+    { to: '/admin/analytics', label: 'Analytics', hint: 'Revenue, workload and no-show rate' },
   ]
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <p className="text-gray-500">Loading dashboard...</p>
+      <div>
+        <PageHeader eyebrow="Administration" title="Dashboard" />
+        <StatRow>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i} className="panel px-md py-sm">
+              <div className="skeleton h-3 w-20" />
+              <div className="skeleton mt-2xs h-7 w-16" />
+            </div>
+          ))}
+        </StatRow>
+        <Panel title="Today">
+          <SkeletonRows rows={3} />
+        </Panel>
       </div>
     )
   }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-          {hospitalInfo && (
-            <p className="text-gray-600 text-sm">{hospitalInfo.name} — {hospitalInfo.phone}</p>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Administration"
+        title="Dashboard"
+        meta={
+          hospitalInfo
+            ? `${hospitalInfo.name}${hospitalInfo.phone ? ` · ${hospitalInfo.phone}` : ''}`
+            : 'Hospital configuration has not been set yet.'
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {statCards.map(card => (
-          <Link
-            key={card.label}
-            to={card.link}
-            className={`bg-${card.color}-50 p-4 rounded shadow hover:shadow-md transition-shadow text-center block`}
-          >
-            <div className="text-2xl mb-2">{card.icon}</div>
-            <h3 className="text-gray-600 text-sm font-medium">{card.label}</h3>
-            <p className={`text-2xl font-bold text-${card.color}-700`}>{card.value}</p>
-          </Link>
-        ))}
-      </div>
+      <StatRow>
+        <Stat label="Doctors" value={stats.doctors} foot="Registered on the roster" />
+        <Stat label="Patients" value={stats.patients} foot="Records on file" />
+        <Stat label="Today's visits" value={stats.todayAppointments} foot="Appointments booked today" />
+        <Stat
+          label="Revenue today"
+          value={`$${stats.revenue}`}
+          foot="Collected from paid visits"
+          tone="ok"
+        />
+      </StatRow>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <span>⚠️</span> No-shows Today
-          </h2>
-          <p className="text-2xl font-bold text-red-600">{stats.noShows}</p>
-          <p className="text-sm text-gray-500">Patients marked as no-show</p>
-        </div>
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <span>📊</span> System Status
-          </h2>
-          <p className="text-sm font-medium text-green-600">
-            ✅ Live — Connected to Supabase
-          </p>
-        </div>
-      </div>
+      <div className="grid gap-md lg:grid-cols-3">
+        <Panel title="Today" className="lg:col-span-2">
+          <dl className="grid grid-cols-2 gap-sm">
+            <div>
+              <dt className="label-mono">No-shows</dt>
+              <dd className={`mt-3xs font-display text-xl font-semibold tnum ${stats.noShows > 0 ? 'text-danger' : 'text-ink'}`}>
+                {stats.noShows}
+              </dd>
+            </div>
+            <div>
+              <dt className="label-mono">Revenue</dt>
+              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">${stats.revenue}</dd>
+            </div>
+          </dl>
 
-      <div className="bg-white p-6 rounded shadow">
-        <h2 className="text-lg font-semibold mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <button
-            onClick={() => window.location.href = '/admin/doctors'}
-            className="p-3 bg-blue-50 rounded text-left hover:bg-blue-100 transition-colors"
-          >
-            <span className="block font-medium">Add Doctor</span>
-            <span className="text-xs text-gray-500">Register a new doctor</span>
-          </button>
-          <button
-            onClick={() => window.location.href = '/admin/staff'}
-            className="p-3 bg-purple-50 rounded text-left hover:bg-purple-100 transition-colors"
-          >
-            <span className="block font-medium">Create Staff</span>
-            <span className="text-xs text-gray-500">Add new staff member</span>
-          </button>
-          <button
-            onClick={() => window.location.href = '/admin/analytics'}
-            className="p-3 bg-green-50 rounded text-left hover:bg-green-100 transition-colors"
-          >
-            <span className="block font-medium">View Analytics</span>
-            <span className="text-xs text-gray-500">Check revenue & stats</span>
-          </button>
-        </div>
+          <div className="mt-md border-t border-rule pt-sm">
+            {stats.noShows > 0 ? (
+              <Notice tone="warn" title={`${stats.noShows} ${stats.noShows === 1 ? 'patient' : 'patients'} did not arrive`}>
+                Counter staff can re-queue a no-show from the Live queue page.
+              </Notice>
+            ) : (
+              <Notice tone="ok" title="No no-shows recorded today">
+                Every booked patient has been seen or is still waiting.
+              </Notice>
+            )}
+          </div>
+        </Panel>
+
+        <Panel title="Quick actions">
+          <ul className="divide-y divide-rule">
+            {actions.map(a => (
+              <li key={a.to}>
+                <Link
+                  to={a.to}
+                  className="block px-0 py-xs transition-colors duration-150 ease-out hover:text-accent"
+                >
+                  <span className="block text-sm font-medium text-ink">{a.label}</span>
+                  <span className="block text-xs text-ink-3">{a.hint}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       </div>
     </div>
   )
