@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { doctorsService } from '../../services/supabase'
+import { doctorsService, tokensService } from '../../services/supabase'
 import { TEST_SPECIALTIES } from '../../data/seedDoctors'
+import { openTokensByDoctor, availabilityMeta, AVAILABILITY_OPTIONS } from '../../shared/utils/doctorStatus'
 import { Button, EmptyState, Field, Modal, Notice, PageHeader, Panel, SkeletonRows, StatusChip } from '../../components/ui'
 
 export default function DoctorsPage() {
   const [doctors, setDoctors] = useState([])
+  const [openTokens, setOpenTokens] = useState([])
   const [loading, setLoading] = useState(true)
   const [editingDoctor, setEditingDoctor] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
@@ -19,6 +21,13 @@ export default function DoctorsPage() {
     })
     return () => unsubscribe()
   }, [])
+
+  useEffect(() => {
+    const unsubscribe = tokensService.subscribeOpen(setOpenTokens)
+    return unsubscribe
+  }, [])
+
+  const countsByDoctor = openTokensByDoctor(openTokens)
 
   const handleSave = async (doctorData, editId) => {
     setActionLoading(true)
@@ -77,32 +86,47 @@ export default function DoctorsPage() {
                   <th>Fee</th>
                   <th>Room</th>
                   <th>Hours</th>
+                  <th>Status</th>
                   <th>Login</th>
                   <th className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {doctors.map(doc => (
-                  <tr key={doc.id}>
-                    <td className="cell-strong">{doc.name}</td>
-                    <td>{doc.specialty}</td>
-                    <td className="tnum">${doc.fee}</td>
-                    <td>{doc.room || '—'}</td>
-                    <td>{doc.hours || '—'}</td>
-                    <td>
-                      {doc.email ? (
-                        <StatusChip tone="ok">{doc.email}</StatusChip>
-                      ) : (
-                        <StatusChip tone="warn">No login</StatusChip>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingDoctor(doc)}>
-                        Edit
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {doctors.map(doc => {
+                  const count = countsByDoctor[doc.id]
+                  const waiting = count?.waiting || 0
+                  return (
+                    <tr key={doc.id}>
+                      <td className="cell-strong">{doc.name}</td>
+                      <td>{doc.specialty}</td>
+                      <td className="tnum">${doc.fee}</td>
+                      <td>{doc.room || '—'}</td>
+                      <td>{doc.hours || '—'}</td>
+                      <td>
+                        <div className="flex flex-wrap items-center gap-2xs">
+                          <StatusChip tone={availabilityMeta(doc.availability).tone}>
+                            {availabilityMeta(doc.availability).label}
+                          </StatusChip>
+                          {waiting > 0 && (
+                            <span className="text-xs text-ink-3">{waiting} waiting</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        {doc.email ? (
+                          <StatusChip tone="ok">{doc.email}</StatusChip>
+                        ) : (
+                          <StatusChip tone="warn">No login</StatusChip>
+                        )}
+                      </td>
+                      <td className="text-right">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingDoctor(doc)}>
+                          Edit
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -127,9 +151,10 @@ function DoctorForm({ doctor, specialties, loading, onClose, onSave }) {
   const [fee, setFee] = useState(doctor?.fee || '')
   const [room, setRoom] = useState(doctor?.room || '')
   const [hours, setHours] = useState(doctor?.hours || '')
+  const [availability, setAvailability] = useState(doctor?.availability || 'available')
 
   const handleSubmit = () => {
-    onSave({ specialty, fee: parseInt(fee) || 0, room, hours })
+    onSave({ specialty, fee: parseInt(fee) || 0, room, hours, availability })
   }
 
   return (
@@ -143,6 +168,17 @@ function DoctorForm({ doctor, specialties, loading, onClose, onSave }) {
             className="input"
           >
             {specialties.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </Field>
+
+        <Field label="Availability" htmlFor="doctor-availability" hint="Shown to patients, staff and the wait queue.">
+          <select
+            id="doctor-availability"
+            value={availability}
+            onChange={(e) => setAvailability(e.target.value)}
+            className="input"
+          >
+            {AVAILABILITY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
           </select>
         </Field>
 

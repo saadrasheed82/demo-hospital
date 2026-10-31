@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { doctorsService, tokensService } from '../../services/supabase'
-import { Button, EmptyState, Field, Notice, PageHeader, Panel, QueueChip, SkeletonRows } from '../../components/ui'
+import { availabilityMeta } from '../../shared/utils/doctorStatus'
+import { Button, EmptyState, Field, Notice, PageHeader, Panel, QueueChip, SkeletonRows, StatusChip } from '../../components/ui'
 
 export default function LiveQueue() {
   const [doctors, setDoctors] = useState([])
@@ -85,10 +86,22 @@ export default function LiveQueue() {
               >
                 {doctors.length === 0 && <option value="">No doctors available</option>}
                 {doctors.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} — {d.specialty}</option>
+                  <option key={d.id} value={d.id}>
+                    {d.name} — {d.specialty}
+                    {d.availability && d.availability !== 'available'
+                      ? ` · ${availabilityMeta(d.availability).label}`
+                      : ''}
+                  </option>
                 ))}
               </select>
             </Field>
+            {doctor && (
+              <div className="mt-sm">
+                <StatusChip tone={availabilityMeta(doctor.availability).tone}>
+                  {availabilityMeta(doctor.availability).label}
+                </StatusChip>
+              </div>
+            )}
           </div>
         }
       />

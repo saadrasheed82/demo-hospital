@@ -347,6 +347,32 @@ export const tokensService = {
     return data || []
   },
 
+  // Open tokens (pending or current) across all doctors, in one query.
+  // Lets roster/queue views show live per-doctor waiting counts without a
+  // fetch per doctor.
+  getOpen: async () => {
+    if (!isSupabaseActive) return []
+    const { data, error } = await supabase
+      .from('tokens')
+      .select('id, doctor_id, token, status')
+      .in('status', ['pending', 'current'])
+      .order('token', { ascending: true })
+    if (error) return []
+    return data || []
+  },
+
+  subscribeOpen: (callback) => {
+    if (!isSupabaseActive) return () => {}
+    const subscription = supabase
+      .channel('tokens-open-channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tokens' }, () => {
+        tokensService.getOpen().then(callback)
+      })
+      .subscribe()
+    tokensService.getOpen().then(callback)
+    return () => { subscription.unsubscribe() }
+  },
+
   create: async (token) => {
     if (!isSupabaseActive) throw new Error('Supabase not connected')
     const record = token.id ? token : { ...token, id: makeId('tok') }

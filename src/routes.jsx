@@ -21,6 +21,7 @@ import UsersPage from './features/admin/UsersPage'
 import SchedulePage from './features/admin/SchedulePage'
 import AnalyticsPage from './features/admin/AnalyticsPage'
 import ConfigPage from './features/admin/ConfigPage'
+import { isPatientOnly } from './config'
 
 export default function AppRoutes() {
   return (
@@ -28,41 +29,43 @@ export default function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<Navigate to="/login" />} />
 
-      {/* Admin Routes */}
-      <Route path="/admin" element={
-        <ProtectedRoute allowedRoles={['admin']}>
-          <AdminLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<AdminDashboard />} />
-        <Route path="doctors" element={<DoctorsPage />} />
-        <Route path="staff" element={<StaffPage />} />
-        <Route path="team-logins" element={<UsersPage />} />
-        <Route path="schedule" element={<SchedulePage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
-        <Route path="config" element={<ConfigPage />} />
-      </Route>
+      {/* Role workspaces — omitted entirely in the patient-only Android build */}
+      {!isPatientOnly && (
+        <>
+          <Route path="/admin" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<AdminDashboard />} />
+            <Route path="doctors" element={<DoctorsPage />} />
+            <Route path="staff" element={<StaffPage />} />
+            <Route path="team-logins" element={<UsersPage />} />
+            <Route path="schedule" element={<SchedulePage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="config" element={<ConfigPage />} />
+          </Route>
 
-      {/* Staff Routes */}
-      <Route path="/staff" element={
-        <ProtectedRoute allowedRoles={['staff']}>
-          <StaffLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<LiveQueue />} />
-        <Route path="queue" element={<LiveQueue />} />
-        <Route path="book" element={<BookAppointment />} />
-      </Route>
+          <Route path="/staff" element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <StaffLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<LiveQueue />} />
+            <Route path="queue" element={<LiveQueue />} />
+            <Route path="book" element={<BookAppointment />} />
+          </Route>
 
-      {/* Doctor Routes */}
-      <Route path="/doctor" element={
-        <ProtectedRoute allowedRoles={['doctor']}>
-          <DoctorLayout />
-        </ProtectedRoute>
-      }>
-        <Route index element={<DoctorDashboard />} />
-        <Route path="history" element={<DoctorHistory />} />
-      </Route>
+          <Route path="/doctor" element={
+            <ProtectedRoute allowedRoles={['doctor']}>
+              <DoctorLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<DoctorDashboard />} />
+            <Route path="history" element={<DoctorHistory />} />
+          </Route>
+        </>
+      )}
 
       {/* Patient Routes */}
       <Route path="/patient" element={

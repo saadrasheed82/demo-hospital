@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useDoctor } from './DoctorLayout'
-import { ArrivalToggle } from './ArrivalToggle'
+import { AvailabilityToggle } from './AvailabilityToggle'
 import { NextPatientButton } from './NextPatientButton'
 import { ConsultNotes } from './ConsultNotes'
-import { tokensService } from '../../services/supabase'
+import { doctorsService, tokensService } from '../../services/supabase'
+import { availabilityMeta } from '../../shared/utils/doctorStatus'
 import { Button, EmptyState, Notice, PageHeader, Panel, PaymentChip, SkeletonRows, StatusChip } from '../../components/ui'
 
 const INITIAL_TOKENS = [
@@ -22,7 +23,8 @@ export default function DoctorDashboard() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [showNotes, setShowNotes] = useState(null)
-  const [arrivalStatus, setArrivalStatus] = useState('arrived')
+  const [availability, setAvailability] = useState('available')
+  const [savingAvailability, setSavingAvailability] = useState(false)
 
   useEffect(() => {
     if (isDemo || !doctorId) {
@@ -82,6 +84,24 @@ export default function DoctorDashboard() {
 
   const handleNext = isDemo ? handleDemoNext : handleDbNext
 
+  // Keep the toggle in step with the record (admin edits, another device).
+  useEffect(() => {
+    if (doctor?.availability) setAvailability(doctor.availability)
+  }, [doctor?.availability])
+
+  const handleAvailabilityChange = async (value) => {
+    setAvailability(value)
+    if (isDemo || !doctorId) return
+    setSavingAvailability(true)
+    try {
+      await doctorsService.update(doctorId, { availability: value })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSavingAvailability(false)
+    }
+  }
+
   return (
     <div>
       <PageHeader
@@ -92,7 +112,13 @@ export default function DoctorDashboard() {
             ? `${doctor.specialty}${doctor.room ? ` · Room ${doctor.room}` : ''}`
             : 'No doctor record linked to this login.'
         }
-        actions={<ArrivalToggle status={arrivalStatus} onStatusChange={setArrivalStatus} />}
+        actions={
+          <AvailabilityToggle
+            value={availability}
+            onChange={handleAvailabilityChange}
+            busy={savingAvailability}
+          />
+        }
       />
 
       {isDemo && (
@@ -117,7 +143,7 @@ export default function DoctorDashboard() {
         <>
           {/* ── the one dark beat: who is in the room now ─────────────── */}
           {currentToken ? (
-            <section className={`graphite mb-md p-md lg:p-lg ${arrivalStatus !== 'arrived' ? 'opacity-60' : ''}`}>
+            <section className={`graphite mb-md p-md lg:p-lg ${availability !== 'available' ? 'opacity-60' : ''}`}>
               <div className="flex flex-wrap items-start justify-between gap-md">
                 <div className="min-w-0">
                   <p className="label-mono">Currently seeing</p>
@@ -144,9 +170,12 @@ export default function DoctorDashboard() {
                 </div>
               </div>
 
-              {arrivalStatus !== 'arrived' && (
-                <p className="mt-md border-t border-graphite-2 pt-sm text-sm text-graphite-dim">
-                  You are marked as {arrivalStatus} — the counter can see this.
+              {availability !== 'available' && (
+                <p className="mt-md flex items-center gap-sm border-t border-graphite-2 pt-sm text-sm text-graphite-dim">
+                  <StatusChip tone={availabilityMeta(availability).tone}>
+                    {availabilityMeta(availability).label}
+                  </StatusChip>
+                  <span>Patients, staff and admin can see this.</span>
                 </p>
               )}
             </section>

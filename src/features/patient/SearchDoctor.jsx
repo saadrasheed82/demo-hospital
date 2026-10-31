@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { doctorsService, settingsService } from '../../services/supabase'
+import { doctorsService, settingsService, tokensService } from '../../services/supabase'
 import { TEST_DOCTORS, TEST_SPECIALTIES } from '../../data/seedDoctors'
 import { isSupabaseActive } from '../../supabase'
-import { Button, EmptyState, Field, Notice, PageHeader, SkeletonPanel } from '../../components/ui'
+import { openTokensByDoctor, liveQueueLine, availabilityMeta } from '../../shared/utils/doctorStatus'
+import { Button, EmptyState, Field, Notice, PageHeader, SkeletonPanel, StatusChip } from '../../components/ui'
 
 export default function SearchDoctor() {
   const [doctors, setDoctors] = useState([])
   const [specialties, setSpecialties] = useState(TEST_SPECIALTIES)
   const [specialty, setSpecialty] = useState('')
   const [loading, setLoading] = useState(true)
+  const [openTokens, setOpenTokens] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -23,8 +25,14 @@ export default function SearchDoctor() {
     return unsub
   }, [])
 
+  useEffect(() => {
+    const unsub = tokensService.subscribeOpen(setOpenTokens)
+    return unsub
+  }, [])
+
   const source = isSupabaseActive ? doctors : TEST_DOCTORS
   const filtered = specialty ? source.filter(d => d.specialty === specialty) : source
+  const countsByDoctor = openTokensByDoctor(openTokens)
 
   return (
     <div>
@@ -73,38 +81,56 @@ export default function SearchDoctor() {
             {filtered.length} {filtered.length === 1 ? 'doctor' : 'doctors'}
           </p>
           <div className="grid gap-sm sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map(doc => (
-              <article key={doc.id} className="panel flex flex-col">
-                <div className="panel-body flex flex-1 flex-col">
-                  <div className="flex items-start justify-between gap-sm">
-                    <div className="min-w-0">
-                      <h2 className="truncate font-display text-base font-semibold">{doc.name}</h2>
-                      <p className="mt-3xs text-sm text-ink-3">{doc.specialty}</p>
+            {filtered.map(doc => {
+              const offDuty = doc.availability === 'off_duty'
+              const queueLine = liveQueueLine(countsByDoctor, doc.id)
+              return (
+                <article key={doc.id} className="panel flex flex-col">
+                  <div className="panel-body flex flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-sm">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-xs">
+                          <h2 className="truncate font-display text-base font-semibold">{doc.name}</h2>
+                          {isSupabaseActive && (
+                            <StatusChip tone={availabilityMeta(doc.availability).tone}>
+                              {availabilityMeta(doc.availability).label}
+                            </StatusChip>
+                          )}
+                        </div>
+                        <p className="mt-3xs text-sm text-ink-3">{doc.specialty}</p>
+                      </div>
+                      <span className="chip tnum shrink-0">${doc.fee}</span>
                     </div>
-                    <span className="chip tnum shrink-0">${doc.fee}</span>
+
+                    <dl className="mt-md space-y-2xs border-t border-rule pt-sm text-sm">
+                      <div className="flex justify-between gap-sm">
+                        <dt className="text-ink-3">Room</dt>
+                        <dd className="font-medium text-ink-2">{doc.room || '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-sm">
+                        <dt className="text-ink-3">Hours</dt>
+                        <dd className="font-medium text-ink-2">{doc.hours || '—'}</dd>
+                      </div>
+                      {isSupabaseActive && (
+                        <div className="flex justify-between gap-sm">
+                          <dt className="text-ink-3">Now</dt>
+                          <dd className="font-medium text-ink-2">{queueLine || 'Queue clear'}</dd>
+                        </div>
+                      )}
+                    </dl>
+
+                    <Button
+                      className="mt-md"
+                      block
+                      disabled={offDuty}
+                      onClick={() => navigate(`/patient/book/${doc.id}`)}
+                    >
+                      {offDuty ? 'Off duty' : `Book with ${doc.name.split(' ').slice(-1)[0]}`}
+                    </Button>
                   </div>
-
-                  <dl className="mt-md space-y-2xs border-t border-rule pt-sm text-sm">
-                    <div className="flex justify-between gap-sm">
-                      <dt className="text-ink-3">Room</dt>
-                      <dd className="font-medium text-ink-2">{doc.room || '—'}</dd>
-                    </div>
-                    <div className="flex justify-between gap-sm">
-                      <dt className="text-ink-3">Hours</dt>
-                      <dd className="font-medium text-ink-2">{doc.hours || '—'}</dd>
-                    </div>
-                  </dl>
-
-                  <Button
-                    className="mt-md"
-                    block
-                    onClick={() => navigate(`/patient/book/${doc.id}`)}
-                  >
-                    Book with {doc.name.split(' ').slice(-1)[0]}
-                  </Button>
-                </div>
-              </article>
-            ))}
+                </article>
+              )
+            })}
           </div>
         </>
       )}

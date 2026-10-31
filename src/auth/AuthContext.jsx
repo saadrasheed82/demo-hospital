@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { usersService, signupPatientAccount } from '../services/supabase'
+import { patientOnlyGuard } from '../config'
 
 export const AuthContext = createContext()
 export const useAuth = () => useContext(AuthContext)
@@ -36,6 +37,8 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const row = await usersService.verify(email, password)
     if (!row) throw new Error('Invalid email or password')
+    const guardMessage = patientOnlyGuard(row.role)
+    if (guardMessage) throw new Error(guardMessage)
     const session = { id: row.id, email: row.email, name: row.name, role: row.role }
     persist(session)
     return session.role

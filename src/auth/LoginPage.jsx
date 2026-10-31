@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import { isSupabaseActive } from '../supabase'
+import { isPatientOnly } from '../config'
 import { Button, Field, Notice } from '../components/ui'
 
 export default function LoginPage() {
@@ -66,25 +67,46 @@ export default function LoginPage() {
 
         <div className="my-lg max-w-md">
           <h1 className="font-display text-xl font-semibold leading-tight lg:text-2xl">
-            One queue your whole hospital can read.
+            {isPatientOnly
+              ? 'Book, pay and track your visit from your phone.'
+              : 'One queue your whole hospital can read.'}
           </h1>
-          <p className="mt-sm text-sm leading-relaxed text-graphite-dim">
-            Patients book and track a token. Counter staff run the live queue. Doctors call the next patient and file
-            consult notes. Administrators manage the team, schedules and revenue — against one shared record.
-          </p>
+          {isPatientOnly ? (
+            <p className="mt-sm text-sm leading-relaxed text-graphite-dim">
+              Find a doctor, book an appointment, pay securely and follow your token in the live queue — all from this
+              app.
+            </p>
+          ) : (
+            <p className="mt-sm text-sm leading-relaxed text-graphite-dim">
+              Patients book and track a token. Counter staff run the live queue. Doctors call the next patient and file
+              consult notes. Administrators manage the team, schedules and revenue — against one shared record.
+            </p>
+          )}
 
           <dl className="mt-lg grid grid-cols-2 gap-x-md gap-y-sm border-t border-graphite-2 pt-md">
-            {[
-              ['Patient', 'Book · pay · track'],
-              ['Counter', 'Live queue · re-queue'],
-              ['Doctor', 'Now serving · notes'],
-              ['Admin', 'Team · schedule · revenue'],
-            ].map(([role, detail]) => (
-              <div key={role}>
-                <dt className="label-mono text-graphite-ink">{role}</dt>
-                <dd className="mt-3xs text-xs text-graphite-dim">{detail}</dd>
-              </div>
-            ))}
+            {isPatientOnly
+              ? [
+                  ['Find a doctor', 'By specialty & fee'],
+                  ['Book & pay', 'Secure, one step'],
+                  ['Live queue', 'Track your token'],
+                  ['History', 'Past visits'],
+                ].map(([role, detail]) => (
+                  <div key={role}>
+                    <dt className="label-mono text-graphite-ink">{role}</dt>
+                    <dd className="mt-3xs text-xs text-graphite-dim">{detail}</dd>
+                  </div>
+                ))
+              : [
+                  ['Patient', 'Book · pay · track'],
+                  ['Counter', 'Live queue · re-queue'],
+                  ['Doctor', 'Now serving · notes'],
+                  ['Admin', 'Team · schedule · revenue'],
+                ].map(([role, detail]) => (
+                  <div key={role}>
+                    <dt className="label-mono text-graphite-ink">{role}</dt>
+                    <dd className="mt-3xs text-xs text-graphite-dim">{detail}</dd>
+                  </div>
+                ))}
           </dl>
         </div>
 
@@ -98,7 +120,9 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <p className="label-mono">{isLogin ? 'Sign in' : 'Patient sign-up'}</p>
           <h2 className="mt-3xs font-display text-lg font-semibold">
-            {isLogin ? 'Access your workspace' : 'Create your patient account'}
+            {isLogin
+              ? (isPatientOnly ? 'Sign in to your patient app' : 'Access your workspace')
+              : 'Create your patient account'}
           </h2>
           <p className="mt-2xs text-sm text-ink-3">
             {isLogin
@@ -167,9 +191,11 @@ export default function LoginPage() {
             </button>
           </p>
 
-          <p className="mt-sm text-xs text-ink-3">
-            Staff and doctor logins are issued by the hospital administrator from the admin workspace.
-          </p>
+          {!isPatientOnly && (
+            <p className="mt-sm text-xs text-ink-3">
+              Staff and doctor logins are issued by the hospital administrator from the admin workspace.
+            </p>
+          )}
         </div>
       </section>
     </div>
