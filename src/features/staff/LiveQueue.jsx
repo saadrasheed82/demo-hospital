@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { doctorsService, tokensService } from '../../services/supabase'
 import { availabilityMeta } from '../../shared/utils/doctorStatus'
+import { formatTime } from '../../shared/utils/checkup'
 import { Button, EmptyState, Field, Notice, PageHeader, Panel, QueueChip, SkeletonRows, StatusChip } from '../../components/ui'
 
 export default function LiveQueue() {
@@ -37,9 +38,9 @@ export default function LiveQueue() {
     try {
       const current = queue.find(t => t.status === 'current')
       if (current && current.id !== tokenRow.id) {
-        await tokensService.update(current.id, { status: 'completed' })
+        await tokensService.complete(current.id)
       }
-      await tokensService.update(tokenRow.id, { status: 'current' })
+      await tokensService.call(tokenRow.id)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -148,6 +149,8 @@ export default function LiveQueue() {
                   <th>Age</th>
                   <th>Condition</th>
                   <th>Status</th>
+                  <th>Called</th>
+                  <th>Closed</th>
                   <th className="text-right">Action</th>
                 </tr>
               </thead>
@@ -159,6 +162,8 @@ export default function LiveQueue() {
                     <td className="tnum">{token.age ?? '—'}</td>
                     <td>{token.condition || '—'}</td>
                     <td><QueueChip status={token.status} /></td>
+                    <td className="font-mono text-xs text-ink-2">{formatTime(token.started_at) || '—'}</td>
+                    <td className="font-mono text-xs text-ink-2">{formatTime(token.ended_at) || '—'}</td>
                     <td className="text-right">
                       {token.status === 'no-show' ? (
                         <Button
@@ -187,7 +192,7 @@ export default function LiveQueue() {
                 ))}
                 {queue.length === 0 && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={8}>
                       <EmptyState
                         title="No patients in this queue"
                         hint="Bookings for this doctor will appear here the moment they are created."

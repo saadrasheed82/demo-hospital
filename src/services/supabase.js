@@ -217,11 +217,36 @@ export const appointmentsService = {
     return data || []
   },
 
+  getByToken: async (tokenId) => {
+    if (!isSupabaseActive) return null
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('token_id', tokenId)
+      .maybeSingle()
+    if (error) return null
+    return data
+  },
+
   create: async (appointment) => {
     if (!isSupabaseActive) throw new Error('Supabase not connected')
     const record = appointment.id ? appointment : { ...appointment, id: makeId('apt'), status: appointment.status || 'booked' }
     const { data, error } = await supabase.from('appointments').insert(record).select().single()
     if (error) throw error
+    return data
+  },
+
+  // Bookings create their token after the appointment row, so the link is set
+  // afterwards rather than at insert time.
+  linkToken: async (appointmentId, tokenId) => {
+    if (!isSupabaseActive) return null
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({ token_id: tokenId })
+      .eq('id', appointmentId)
+      .select()
+      .single()
+    if (error) return null
     return data
   },
 
@@ -325,6 +350,16 @@ export const tokensService = {
     return () => { subscription.unsubscribe() }
   },
 
+  getAll: async () => {
+    if (!isSupabaseActive) return []
+    const { data, error } = await supabase
+      .from('tokens')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) return []
+    return data || []
+  },
+
   getByDoctor: async (doctorId) => {
     if (!isSupabaseActive) return []
     const { data, error } = await supabase
@@ -391,6 +426,32 @@ export const tokensService = {
     return data
   },
 
+  // Checkup timing: a visit starts when the doctor calls the token and ends
+  // when it closes. Stamped here so every caller (doctor desk, counter) agrees.
+  call: async (id) => {
+    if (!isSupabaseActive) throw new Error('Supabase not connected')
+    const { data, error } = await supabase
+      .from('tokens')
+      .update({ status: 'current', started_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  complete: async (id) => {
+    if (!isSupabaseActive) throw new Error('Supabase not connected')
+    const { data, error } = await supabase
+      .from('tokens')
+      .update({ status: 'completed', ended_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
   delete: async (id) => {
     if (!isSupabaseActive) throw new Error('Supabase not connected')
     const { error } = await supabase.from('tokens').delete().eq('id', id)
@@ -429,6 +490,29 @@ export const consultNotesService = {
       .from('consult_notes')
       .select('*')
       .eq('appointment_id', appointmentId)
+    if (error) return []
+    return data || []
+  },
+
+  // Everything filed for one patient — the read path behind the patient's own
+  // checkup detail and the admin checkups page.
+  getByPatient: async (patientId) => {
+    if (!isSupabaseActive) return []
+    const { data, error } = await supabase
+      .from('consult_notes')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('completed_at', { ascending: false })
+    if (error) return []
+    return data || []
+  },
+
+  getAll: async () => {
+    if (!isSupabaseActive) return []
+    const { data, error } = await supabase
+      .from('consult_notes')
+      .select('*')
+      .order('completed_at', { ascending: false })
     if (error) return []
     return data || []
   },

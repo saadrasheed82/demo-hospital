@@ -20,6 +20,7 @@ import StaffPage from './features/admin/StaffPage'
 import UsersPage from './features/admin/UsersPage'
 import SchedulePage from './features/admin/SchedulePage'
 import AnalyticsPage from './features/admin/AnalyticsPage'
+import AdminCheckups from './features/admin/AdminCheckups'
 import ConfigPage from './features/admin/ConfigPage'
 import { isPatientOnly } from './config'
 
@@ -42,6 +43,7 @@ export default function AppRoutes() {
             <Route path="staff" element={<StaffPage />} />
             <Route path="team-logins" element={<UsersPage />} />
             <Route path="schedule" element={<SchedulePage />} />
+            <Route path="checkups" element={<AdminCheckups />} />
             <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="config" element={<ConfigPage />} />
           </Route>

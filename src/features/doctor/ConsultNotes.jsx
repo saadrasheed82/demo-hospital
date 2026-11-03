@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { consultNotesService } from '../../services/supabase'
+import { consultNotesService, appointmentsService } from '../../services/supabase'
 import { isSupabaseActive } from '../../supabase'
 import { Button, Field, Modal, Notice } from '../../components/ui'
 
-export function ConsultNotes({ token, doctorId, onClose }) {
+export function ConsultNotes({ token, doctorId, patientId, onClose }) {
   const [notes, setNotes] = useState('')
   const [diagnosis, setDiagnosis] = useState('')
   const [followUp, setFollowUp] = useState(false)
@@ -21,9 +21,14 @@ export function ConsultNotes({ token, doctorId, onClose }) {
     }
     setSaving(true)
     try {
+      // The note records who it belongs to, so the patient (and admin) can find
+      // it without guessing from the token number.
+      const appointment = await appointmentsService.getByToken(token.id)
       await consultNotesService.create({
         doctor_id: doctorId,
         token: token.token,
+        patient_id: patientId || token.patientId || null,
+        appointment_id: appointment?.id || null,
         notes,
         diagnosis,
         follow_up: followUp,

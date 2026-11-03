@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useDoctor } from './DoctorLayout'
-import { consultNotesService, appointmentsService, patientsService } from '../../services/supabase'
-import { isSupabaseActive } from '../../supabase'
-import { EmptyState, Notice, PageHeader, Panel, PaymentChip, SkeletonRows, StatusChip } from '../../components/ui'
+import { consultNotesService, appointmentsService, patientsService, tokensService } from '../../services/supabase'
+import { resolveAppointmentCheckup } from '../../shared/utils/checkup'
+import { CheckupDetail } from '../../components/CheckupDetail'
+import { Button, EmptyState, Notice, PageHeader, Panel, PaymentChip, SkeletonRows, StatusChip } from '../../components/ui'
 
 const CONSULT_LABEL = {
   completed: 'Completed',
@@ -20,7 +21,9 @@ export default function DoctorHistory() {
   const [notes, setNotes] = useState([])
   const [appointments, setAppointments] = useState([])
   const [patients, setPatients] = useState([])
+  const [tokens, setTokens] = useState([])
   const [loading, setLoading] = useState(!isDemo)
+  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     if (isDemo || !doctorId) {
@@ -30,15 +33,17 @@ export default function DoctorHistory() {
     setLoading(true)
     let cancelled = false
     ;(async () => {
-      const [n, a, p] = await Promise.all([
+      const [n, a, p, t] = await Promise.all([
         consultNotesService.getByDoctor(doctorId),
         appointmentsService.getByDoctor(doctorId),
         patientsService.getAll(),
+        tokensService.getByDoctor(doctorId),
       ])
       if (cancelled) return
       setNotes(n)
       setAppointments(a)
       setPatients(p)
+      setTokens(t)
       setLoading(false)
     })()
     return () => { cancelled = true }
@@ -46,6 +51,18 @@ export default function DoctorHistory() {
 
   const patientName = (id) => patients.find(p => p.id === id)?.name || (id ? `#${id}` : '—')
   const fmt = (ts) => (ts ? new Date(ts).toLocaleString() : '—')
+
+  // A note carries no timing of its own, so it borrows the visit it was filed
+  // against. Older notes have no appointment_id, so fall back to the token.
+  const checkupForNote = (note) => {
+    const direct = note.appointment_id ? appointments.find(a => a.id === note.appointment_id) : null
+    const byToken = direct || appointments.find((a) => {
+      const t = tokens.find(t => t.id === a.token_id)
+      return t && String(t.token) === String(note.token)
+    })
+    if (!byToken) return null
+    return resolveAppointmentCheckup(byToken, { tokens, notes, doctors: doctor ? [doctor] : [], patients })
+  }
 
   return (
     <div>
@@ -85,30 +102,52 @@ export default function DoctorHistory() {
               />
             ) : (
               <ul className="divide-y divide-rule">
-                {notes.map(n => (
-                  <li key={n.id} className="panel-body">
-                    <div className="flex flex-wrap items-center justify-between gap-2xs">
-                      <div className="flex flex-wrap items-center gap-2xs">
-                        <span className="token-id">#{n.token || '—'}</span>
-                        <StatusChip tone={CONSULT_TONE[n.consult_status] || 'neutral'}>
-                          {CONSULT_LABEL[n.consult_status] || n.consult_status || 'Unknown'}
-                        </StatusChip>
-                        {n.follow_up && <StatusChip tone="warn">Follow-up required</StatusChip>}
+                {notes.map(n => {
+                  const checkup = checkupForNote(n)
+                  const open = expandedId === n.id
+                  return (
+                    <li key={n.id} className="panel-body">
+                      <div className="flex flex-wrap items-center justify-between gap-2xs">
+                        <div className="flex flex-wrap items-center gap-2xs">
+                          <span className="token-id">#{n.token || '—'}</span>
+                          <StatusChip tone={CONSULT_TONE[n.consult_status] || 'neutral'}>
+                            {CONSULT_LABEL[n.consult_status] || n.consult_status || 'Unknown'}
+                          </StatusChip>
+                          {n.follow_up && <StatusChip tone="warn">Follow-up required</StatusChip>}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2xs">
+                          <span className="font-mono text-xs text-ink-3">
+                            {fmt(n.completed_at || n.created_at)}
+                          </span>
+                          {checkup && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              aria-expanded={open}
+                              onClick={() => setExpandedId(open ? null : n.id)}
+                            >
+                              {open ? 'Hide' : 'Checkup'}
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-mono text-xs text-ink-3">
-                        {fmt(n.completed_at || n.created_at)}
-                      </span>
-                    </div>
 
-                    {n.diagnosis && (
-                      <p className="mt-2xs text-sm">
-                        <span className="label-mono mr-2xs">Diagnosis</span>
-                        <span className="font-medium text-ink">{n.diagnosis}</span>
-                      </p>
-                    )}
-                    {n.notes && <p className="mt-2xs text-sm text-ink-2">{n.notes}</p>}
-                  </li>
-                ))}
+                      {n.diagnosis && (
+                        <p className="mt-2xs text-sm">
+                          <span className="label-mono mr-2xs">Diagnosis</span>
+                          <span className="font-medium text-ink">{n.diagnosis}</span>
+                        </p>
+                      )}
+                      {n.notes && <p className="mt-2xs text-sm text-ink-2">{n.notes}</p>}
+
+                      {open && checkup && (
+                        <div className="mt-sm border-t border-rule pt-sm">
+                          <CheckupDetail checkup={checkup} showNotes={false} />
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </Panel>

@@ -43,6 +43,7 @@ export default function DoctorDashboard() {
   const tokens = (isDemo ? demoTokens : dbTokens).map(t => ({
     id: t.id,
     token: t.token,
+    patientId: t.patient_id,
     name: t.patient_name || t.name,
     age: t.age,
     condition: t.condition,
@@ -73,8 +74,9 @@ export default function DoctorDashboard() {
       const current = dbTokens.find(t => t.status === 'current')
       const next = [...dbTokens].filter(t => t.status === 'pending')
         .sort(byTokenNumber)[0]
-      if (current) await tokensService.update(current.id, { status: 'completed' })
-      if (next) await tokensService.update(next.id, { status: 'current' })
+      // Closing the current visit stamps its end; calling the next stamps its start.
+      if (current) await tokensService.complete(current.id)
+      if (next) await tokensService.call(next.id)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -201,6 +203,7 @@ export default function DoctorDashboard() {
             <ConsultNotes
               token={showNotes}
               doctorId={doctorId}
+              patientId={showNotes.patientId}
               onClose={() => setShowNotes(null)}
             />
           )}

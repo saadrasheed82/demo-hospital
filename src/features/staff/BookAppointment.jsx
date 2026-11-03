@@ -67,7 +67,7 @@ export default function BookAppointment() {
       }
 
       const today = new Date().toISOString().split('T')[0]
-      await appointmentsService.create({
+      const appointment = await appointmentsService.create({
         doctor_id: selectedDoctor,
         patient_id: patientId,
         date: today,
@@ -88,6 +88,10 @@ export default function BookAppointment() {
         status: 'pending',
         payment_status: 'unpaid',
       })
+
+      // Tie the booking to its checkup so the patient's history can reach the
+      // consult notes filed against this token.
+      await appointmentsService.linkToken(appointment.id, token.id)
 
       setConfirmation({ token: token.token, doctor, patientName, fee: doctor?.fee })
     } catch (err) {
