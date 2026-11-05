@@ -130,11 +130,11 @@ export default function PatientHistory() {
                 return (
                   <Fragment key={apt.id}>
                     <tr>
-                      <td className="cell-strong">{doc?.name || '—'}</td>
-                      <td>{doc?.specialty || '—'}</td>
-                      <td className="font-mono text-xs">{apt.date || '—'}</td>
-                      <td className="tnum">Rs {apt.fee ?? 0}</td>
-                      <td>
+                      <td className="cell-strong" data-label="Doctor">{doc?.name || '—'}</td>
+                      <td data-label="Specialty">{doc?.specialty || '—'}</td>
+                      <td className="font-mono text-xs" data-label="Date">{apt.date || '—'}</td>
+                      <td className="tnum" data-label="Fee">Rs {apt.fee ?? 0}</td>
+                      <td data-label="Status">
                         <StatusChip tone={tone}>{label}</StatusChip>
                       </td>
                       <td className="text-right">

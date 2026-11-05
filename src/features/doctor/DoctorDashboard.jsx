@@ -145,11 +145,11 @@ export default function DoctorDashboard() {
         <>
           {/* ── the one dark beat: who is in the room now ─────────────── */}
           {currentToken ? (
-            <section className={`graphite mb-md p-md lg:p-lg ${availability !== 'available' ? 'opacity-60' : ''}`}>
+            <section className={`graphite mb-md p-sm lg:p-lg ${availability !== 'available' ? 'opacity-60' : ''}`}>
               <div className="flex flex-wrap items-start justify-between gap-md">
                 <div className="min-w-0">
                   <p className="label-mono">Currently seeing</p>
-                  <p className="mt-2xs font-mono text-4xl font-semibold leading-none tracking-tight lg:text-5xl">
+                  <p className="mt-2xs font-mono text-3xl font-semibold leading-none tracking-tight lg:text-5xl">
                     #{currentToken.token}
                   </p>
                   <p className="mt-sm font-display text-lg font-semibold">{currentToken.name}</p>
@@ -227,13 +227,13 @@ export default function DoctorDashboard() {
                   <tbody>
                     {pendingTokens.map(t => (
                       <tr key={t.id || t.token}>
-                        <td className="token-id">#{t.token}</td>
-                        <td className="cell-strong">
+                        <td className="token-id" data-label="Token">#{t.token}</td>
+                        <td className="cell-strong" data-label="Patient">
                           {t.name}
                           {t.age != null && <span className="ml-2xs font-normal text-ink-3">({t.age})</span>}
                         </td>
-                        <td>{t.condition || '—'}</td>
-                        <td><PaymentChip status={t.paymentStatus || t.payment_status} /></td>
+                        <td data-label="Condition">{t.condition || '—'}</td>
+                        <td data-label="Payment"><PaymentChip status={t.paymentStatus || t.payment_status} /></td>
                       </tr>
                     ))}
                     {pendingTokens.length === 0 && (
@@ -266,10 +266,10 @@ export default function DoctorDashboard() {
                     <tbody>
                       {finishedTokens.map(t => (
                         <tr key={t.id || t.token}>
-                          <td className="token-id">#{t.token}</td>
-                          <td>{t.name}</td>
-                          <td>{t.condition || '—'}</td>
-                          <td><StatusChip tone="muted">{t.status.replace(/_/g, ' ')}</StatusChip></td>
+                          <td className="token-id" data-label="Token">#{t.token}</td>
+                          <td data-label="Patient">{t.name}</td>
+                          <td data-label="Condition">{t.condition || '—'}</td>
+                          <td data-label="Status"><StatusChip tone="muted">{t.status.replace(/_/g, ' ')}</StatusChip></td>
                         </tr>
                       ))}
                     </tbody>

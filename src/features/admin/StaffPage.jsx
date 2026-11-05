@@ -83,9 +83,9 @@ export default function StaffPage() {
               <tbody>
                 {staff.map(s => (
                   <tr key={s.id}>
-                    <td className="cell-strong">{s.name}</td>
-                    <td className="font-mono text-xs">{s.email}</td>
-                    <td>
+                    <td className="cell-strong" data-label="Name">{s.name}</td>
+                    <td className="font-mono text-xs" data-label="Email">{s.email}</td>
+                    <td data-label="Role">
                       <StatusChip tone={ROLE_TONE[s.role] || 'neutral'}>{s.role}</StatusChip>
                     </td>
                     <td className="text-right">

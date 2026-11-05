@@ -173,14 +173,14 @@ export default function DoctorHistory() {
                   <tbody>
                     {appointments.map(a => (
                       <tr key={a.id}>
-                        <td className="cell-strong">{patientName(a.patient_id)}</td>
-                        <td className="font-mono text-xs">{a.date || '—'}</td>
-                        <td>
+                        <td className="cell-strong" data-label="Patient">{patientName(a.patient_id)}</td>
+                        <td className="font-mono text-xs mobile-hide" data-label="Date">{a.date || '—'}</td>
+                        <td data-label="Status">
                           <StatusChip tone={a.status === 'completed' ? 'ok' : 'neutral'}>
                             {(a.status || '—').replace(/_/g, ' ')}
                           </StatusChip>
                         </td>
-                        <td><PaymentChip status={a.payment_status} /></td>
+                        <td data-label="Payment"><PaymentChip status={a.payment_status} /></td>
                       </tr>
                     ))}
                   </tbody>

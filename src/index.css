@@ -102,6 +102,15 @@
     padding: var(--space-md);
   }
 
+  @media (max-width: 640px) {
+    .panel-head {
+      padding: var(--space-xs) var(--space-sm);
+    }
+    .panel-body {
+      padding: var(--space-sm);
+    }
+  }
+
   /* ── the one dark beat ─────────────────────────────────────────────── */
   .graphite {
     background: var(--color-graphite);
@@ -160,6 +169,19 @@
       background-color var(--dur-short) var(--ease-out),
       border-color var(--dur-short) var(--ease-out),
       color var(--dur-short) var(--ease-out);
+  }
+
+  @media (max-width: 640px) {
+    /* Thumb-friendly touch targets on mobile, slightly smaller vertical hit. */
+    .btn {
+      padding: 0.5625rem var(--space-sm);
+      min-height: 2.25rem;
+    }
+    .btn--sm {
+      padding: 0.3125rem var(--space-xs);
+      min-height: 2rem;
+      font-size: var(--text-xs);
+    }
   }
 
   .btn--primary {
@@ -235,6 +257,15 @@
     padding: 0.5625rem var(--space-xs);
     min-height: 2.5rem;
     transition: border-color var(--dur-short) var(--ease-out);
+  }
+
+  @media (max-width: 640px) {
+    /* Larger touch-friendly fields on mobile, tighter bottom padding. */
+    .input,
+    select.input {
+      font-size: 1rem;
+      padding: 0.625rem var(--space-sm);
+    }
   }
 
   .input:hover:not(:disabled) {
@@ -351,6 +382,63 @@
 
   .table tbody tr:hover {
     background: var(--color-paper-2);
+  }
+
+  /* ── mobile tables — every row becomes a labelled card below 640px, so
+   * dense queues and histories never force horizontal scrolling. Give a cell
+   * a `data-label` and its column name prints above the value on phones. */
+  @media (max-width: 640px) {
+    .table thead {
+      display: none;
+    }
+
+    .table tbody tr {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2xs) var(--space-sm);
+      padding: var(--space-sm);
+      border-bottom: var(--rule-hairline);
+    }
+
+    .table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .table tbody td {
+      display: flex;
+      flex-direction: column;
+      gap: 0.125rem;
+      padding: 0;
+      border: none;
+    }
+
+    /* The identifying cell (token / name) takes the full card width. */
+    .table tbody td:first-child {
+      flex-basis: 100%;
+      font-weight: 500;
+    }
+
+    /* Column name printed above the value. */
+    .table tbody td[data-label]::before {
+      content: attr(data-label);
+      font-family: var(--font-mono);
+      font-size: var(--text-2xs);
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--color-ink-3);
+    }
+
+    /* An expanded detail row spans the whole card and drops its padding. */
+    .table tbody td[colspan] {
+      flex-basis: 100%;
+      width: 100%;
+    }
+
+    /* Columns too dense to earn space on a phone. */
+    .table tbody td.mobile-hide {
+      display: none;
+    }
   }
 
   .table .cell-strong {

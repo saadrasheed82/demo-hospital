@@ -118,7 +118,7 @@ export default function PaymentForm() {
                 loading={processing}
                 loadingLabel="Processing…"
               >
-                Pay Rs ${doctor.fee}
+                Pay Rs {doctor.fee}
               </Button>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function PaymentForm() {
             </div>
             <div className="border-t border-rule pt-xs">
               <dt className="label-mono">Total</dt>
-              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">Rs ${doctor.fee}</dd>
+              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">Rs {doctor.fee}</dd>
             </div>
           </dl>
         </Panel>

@@ -132,7 +132,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <dt className="label-mono">Revenue</dt>
-              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">Rs ${stats.revenue}</dd>
+              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">Rs {stats.revenue}</dd>
             </div>
           </dl>
 

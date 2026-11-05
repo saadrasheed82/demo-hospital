@@ -157,14 +157,14 @@ export default function LiveQueue() {
               <tbody>
                 {queue.map(token => (
                   <tr key={token.id} className={token.status === 'current' ? 'row-focus' : ''}>
-                    <td className="token-id">#{token.token}</td>
-                    <td className="cell-strong">{token.patient_name}</td>
-                    <td className="tnum">{token.age ?? '—'}</td>
-                    <td>{token.condition || '—'}</td>
-                    <td><QueueChip status={token.status} /></td>
-                    <td className="font-mono text-xs text-ink-2">{formatTime(token.started_at) || '—'}</td>
-                    <td className="font-mono text-xs text-ink-2">{formatTime(token.ended_at) || '—'}</td>
-                    <td className="text-right">
+                    <td className="token-id" data-label="Token">#{token.token}</td>
+                    <td className="cell-strong" data-label="Patient">{token.patient_name}</td>
+                    <td className="tnum mobile-hide" data-label="Age">{token.age ?? '—'}</td>
+                    <td data-label="Condition">{token.condition || '—'}</td>
+                    <td data-label="Status"><QueueChip status={token.status} /></td>
+                    <td className="font-mono text-xs text-ink-2 mobile-hide" data-label="Called">{formatTime(token.started_at) || '—'}</td>
+                    <td className="font-mono text-xs text-ink-2 mobile-hide" data-label="Closed">{formatTime(token.ended_at) || '—'}</td>
+                    <td className="text-right" data-label="Action">
                       {token.status === 'no-show' ? (
                         <Button
                           variant="secondary"

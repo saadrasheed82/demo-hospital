@@ -103,16 +103,16 @@ export default function AdminCheckups() {
                   return (
                     <Fragment key={apt.id}>
                       <tr>
-                        <td className="token-id">{checkup.tokenNumber ? `#${checkup.tokenNumber}` : '—'}</td>
-                        <td className="cell-strong">{checkup.patient?.name || '—'}</td>
-                        <td>
+                        <td className="token-id" data-label="Token">{checkup.tokenNumber ? `#${checkup.tokenNumber}` : '—'}</td>
+                        <td className="cell-strong" data-label="Patient">{checkup.patient?.name || '—'}</td>
+                        <td data-label="Doctor">
                           {checkup.doctor?.name || '—'}
                           {checkup.doctor?.specialty && (
                             <span className="block text-xs text-ink-3">{checkup.doctor.specialty}</span>
                           )}
                         </td>
-                        <td className="font-mono text-xs">{apt.date || '—'}</td>
-                        <td>
+                        <td className="font-mono text-xs mobile-hide" data-label="Date">{apt.date || '—'}</td>
+                        <td data-label="Payment">
                           <PaymentChip status={apt.payment_status} />
                         </td>
                         <td className="text-right">

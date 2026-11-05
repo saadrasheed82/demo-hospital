@@ -245,60 +245,102 @@ export function AppShell({ workspace, role, children, nav = [], aside }) {
         Skip to content
       </a>
 
-      {/* ── side rail ─────────────────────────────────────────────────── */}
+      {/* ── top header (mobile): back / home + role + sign out ─────────── */}
+      <header className="sticky top-0 z-40 flex items-center justify-between gap-sm border-b border-rule bg-paper px-md py-2xs lg:hidden">
+        <div className="flex items-center gap-2xs">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} aria-label="Go back">
+            ← Back
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => {
+            const first = nav[0]?.to
+            first && navigate(first)
+          }} aria-label="Home">
+            Home
+          </Button>
+        </div>
+        <div className="flex items-center gap-2xs">
+          <span className="chip">{role}</span>
+          <Button variant="secondary" size="sm" onClick={handleLogout}>Sign out</Button>
+        </div>
+      </header>
+
+      {/* ── desktop side rail ─────────────────────────────────────────── */}
       <nav
-        className="shrink-0 border-b border-rule bg-paper-2 lg:sticky lg:top-0 lg:h-screen lg:w-60 lg:border-b-0 lg:border-r"
+        className="hidden shrink-0 border-r border-rule bg-paper-2 lg:sticky lg:top-0 lg:block lg:h-screen lg:w-60"
         aria-label={`${workspace} navigation`}
       >
-        <div className="flex items-center justify-between gap-sm px-md py-xs lg:block lg:py-md">
-          <div className="min-w-0">
+        <div className="flex flex-col gap-sm px-md py-md">
+          <div>
             <p className="font-display text-base font-semibold tracking-tight text-ink">Saad Hospital</p>
             <p className="label-mono mt-3xs">{workspace}</p>
           </div>
-          <span className="chip lg:hidden">{role}</span>
-        </div>
 
-        <ul className="flex gap-3xs overflow-x-auto border-t border-rule px-2xs py-2xs lg:mt-sm lg:flex-col lg:gap-3xs lg:border-t-0 lg:px-xs lg:py-0">
-          {nav.map((item) => (
-            <li key={item.to} className="shrink-0 lg:shrink">
-              <NavLink
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) =>
-                  [
-                    'block whitespace-nowrap rounded-control px-xs py-2xs text-sm transition-colors duration-150 ease-out',
-                    isActive
-                      ? 'bg-accent-soft font-medium text-accent shadow-[inset_2px_0_0_oklch(58%_0.20_256)]'
-                      : 'text-ink-2 hover:bg-paper-3 hover:text-ink',
-                  ].join(' ')
-                }
-              >
-                {item.label}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+          <ul className="flex flex-col gap-3xs">
+            {nav.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    [
+                      'rounded-control px-xs py-2xs text-sm transition-colors duration-150 ease-out',
+                      isActive
+                        ? 'bg-accent-soft font-medium text-accent shadow-[inset_2px_0_0_oklch(58%_0.20_256)]'
+                        : 'text-ink-2 hover:bg-paper-3 hover:text-ink',
+                    ].join(' ')
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
 
-        {aside && <div className="border-t border-rule px-md py-sm">{aside}</div>}
+          {aside && <div className="mt-sm border-t border-rule pt-sm">{aside}</div>}
 
-        <div className="hidden border-t border-rule px-md py-sm lg:block">
-          <p className="label-mono">Signed in</p>
-          <p className="mt-3xs truncate text-sm font-medium text-ink">{user?.name || user?.email || '—'}</p>
-          <p className="truncate text-xs text-ink-3">{user?.email}</p>
-          <Button variant="secondary" size="sm" onClick={handleLogout} className="mt-sm w-full">
-            Sign out
-          </Button>
+          <div className="mt-auto border-t border-rule pt-sm">
+            <p className="label-mono">Signed in</p>
+            <p className="mt-3xs truncate text-sm font-medium text-ink">{user?.name || user?.email || '—'}</p>
+            <p className="truncate text-xs text-ink-3">{user?.email}</p>
+            <Button variant="secondary" size="sm" onClick={handleLogout} className="mt-sm w-full">
+              Sign out
+            </Button>
+          </div>
         </div>
       </nav>
 
+      {/* ── mobile bottom nav ─────────────────────────────────────────── */}
+      {nav.length > 0 && (
+        <nav
+          className="fixed bottom-0 left-0 right-0 z-40 border-t border-rule bg-paper-2 px-2 py-2xs lg:hidden"
+          aria-label={`${workspace} navigation`}
+        >
+          <ul className="grid grid-cols-3 gap-2xs">
+            {nav.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    [
+                      'flex flex-col items-center justify-center gap-2xs rounded-control px-2 py-1 text-xs transition-colors duration-150 ease-out',
+                      isActive
+                        ? 'bg-accent-soft font-medium text-accent'
+                        : 'text-ink-2 hover:bg-paper-3 hover:text-ink',
+                    ].join(' ')
+                  }
+                >
+                  <span className="block">{item.label}</span>
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
       {/* ── content canvas ────────────────────────────────────────────── */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center justify-between gap-sm border-b border-rule px-md py-xs lg:hidden">
-          <span className="chip">{role}</span>
-          <Button variant="secondary" size="sm" onClick={handleLogout}>
-            Sign out
-          </Button>
-        </div>
+      <div className="min-w-0 flex-1 pb-16 lg:pb-0">
+        {aside && <div className="border-b border-rule bg-paper-2 px-md py-sm lg:hidden">{aside}</div>}
         <main id="workspace" className="mx-auto w-full max-w-6xl px-md py-md lg:px-lg lg:py-lg">
           {children}
         </main>

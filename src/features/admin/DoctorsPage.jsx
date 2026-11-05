@@ -97,12 +97,12 @@ export default function DoctorsPage() {
                   const waiting = count?.waiting || 0
                   return (
                     <tr key={doc.id}>
-                      <td className="cell-strong">{doc.name}</td>
-                      <td>{doc.specialty}</td>
-                      <td className="tnum">Rs {doc.fee}</td>
-                      <td>{doc.room || '—'}</td>
-                      <td>{doc.hours || '—'}</td>
-                      <td>
+                      <td className="cell-strong" data-label="Name">{doc.name}</td>
+                      <td data-label="Specialty">{doc.specialty}</td>
+                      <td className="tnum" data-label="Fee">Rs {doc.fee}</td>
+                      <td data-label="Room">{doc.room || '—'}</td>
+                      <td className="mobile-hide" data-label="Hours">{doc.hours || '—'}</td>
+                      <td data-label="Status">
                         <div className="flex flex-wrap items-center gap-2xs">
                           <StatusChip tone={availabilityMeta(doc.availability).tone}>
                             {availabilityMeta(doc.availability).label}
@@ -112,7 +112,7 @@ export default function DoctorsPage() {
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td className="mobile-hide" data-label="Login">
                         {doc.email ? (
                           <StatusChip tone="ok">{doc.email}</StatusChip>
                         ) : (

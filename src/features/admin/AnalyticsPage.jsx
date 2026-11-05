@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
                       style={{ width: `${Math.max((d.revenue / peak) * 100, d.revenue > 0 ? 3 : 0)}%` }}
                     />
                   </div>
-                  <span className="w-16 shrink-0 text-right font-mono text-xs text-ink-2 tnum">Rs ${d.revenue}</span>
+                  <span className="w-16 shrink-0 text-right font-mono text-xs text-ink-2 tnum">Rs {d.revenue}</span>
                 </div>
               ))}
             </div>
@@ -226,11 +226,11 @@ export default function AnalyticsPage() {
                   const maxToday = Math.max(...doctorWorkload.map(d => d.today), 1)
                   return (
                     <tr key={doc.id || doc.name}>
-                      <td className="cell-strong">{doc.name}</td>
-                      <td>{doc.specialty}</td>
-                      <td className="tnum">{doc.today}</td>
-                      <td className="tnum">{doc.week}</td>
-                      <td className="w-40">
+                      <td className="cell-strong" data-label="Doctor">{doc.name}</td>
+                      <td data-label="Specialty">{doc.specialty}</td>
+                      <td className="tnum" data-label="Today">{doc.today}</td>
+                      <td className="tnum" data-label="This week">{doc.week}</td>
+                      <td className="w-40" data-label="Load">
                         <div className="h-2 overflow-hidden rounded-[2px] bg-paper-3">
                           <div
                             className="h-full rounded-[2px] bg-accent-line"

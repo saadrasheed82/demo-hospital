@@ -120,11 +120,11 @@ export default function TrackQueue() {
       {header}
 
       {/* ── the one dark beat: your token ────────────────────────────── */}
-      <section className="graphite mb-md p-md lg:p-lg">
+      <section className="graphite mb-md p-sm lg:p-lg">
         <div className="flex flex-wrap items-start justify-between gap-md">
           <div>
             <p className="label-mono">Your token</p>
-            <p className="mt-2xs font-mono text-4xl font-semibold leading-none tracking-tight lg:text-5xl">
+            <p className="mt-2xs font-mono text-3xl font-semibold leading-none tracking-tight lg:text-5xl">
               #{myToken.token}
             </p>
             <p className="mt-sm text-sm text-graphite-dim">
@@ -186,11 +186,11 @@ export default function TrackQueue() {
                 const mine = t.id === myToken.id
                 return (
                   <tr key={t.id} className={mine ? 'row-mine' : t.status === 'current' ? 'row-focus' : ''}>
-                    <td className="token-id">#{t.token}</td>
-                    <td className={mine ? 'cell-strong' : ''}>
+                    <td className="token-id" data-label="Token">#{t.token}</td>
+                    <td className={mine ? 'cell-strong' : ''} data-label="Patient">
                       {mine ? 'You' : t.patient_name}
                     </td>
-                    <td>{mine && t.status !== 'current' ? <StatusChip tone="warn">Your token</StatusChip> : <QueueChip status={t.status} />}</td>
+                    <td data-label="Status">{mine && t.status !== 'current' ? <StatusChip tone="warn">Your token</StatusChip> : <QueueChip status={t.status} />}</td>
                   </tr>
                 )
               })}
