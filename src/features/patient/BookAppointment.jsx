@@ -113,14 +113,14 @@ export default function BookAppointment() {
             <div className="flex justify-between gap-sm">
               <dt className="text-ink-3">Fee</dt>
               <dd className="font-medium tnum text-ink">
-                ${doctor.fee} · <span className="text-warn">unpaid</span>
+                Rs ${doctor.fee} · <span className="text-warn">unpaid</span>
               </dd>
             </div>
           </dl>
 
           <div className="mt-md flex flex-wrap gap-2xs border-t border-rule pt-md">
             <Button onClick={() => navigate(`/patient/pay/${doctor.id}`)}>
-              Pay ${doctor.fee} now
+              Pay Rs ${doctor.fee} now
             </Button>
             <Button variant="secondary" onClick={() => navigate('/patient/booked')}>
               Track my queue
@@ -199,7 +199,7 @@ export default function BookAppointment() {
 
             <div className="border-t border-rule pt-sm">
               <Button block onClick={handleBook} loading={saving} loadingLabel="Booking…">
-                Confirm booking — ${doctor.fee}
+                Confirm booking — Rs ${doctor.fee}
               </Button>
             </div>
           </div>
@@ -225,7 +225,7 @@ export default function BookAppointment() {
             </div>
             <div className="border-t border-rule pt-xs">
               <dt className="label-mono">Fee due</dt>
-              <dd className="mt-3xs font-display text-lg font-semibold tnum text-ink">${doctor.fee}</dd>
+              <dd className="mt-3xs font-display text-lg font-semibold tnum text-ink">Rs ${doctor.fee}</dd>
             </div>
           </dl>
 

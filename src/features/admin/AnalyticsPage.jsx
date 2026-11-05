@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
 
       <StatRow>
         <Stat label="Today's visits" value={stats.todayAppointments} foot="Appointments booked today" />
-        <Stat label="Revenue today" value={`$${stats.totalRevenue}`} foot="Collected from paid visits" tone="ok" />
+        <Stat label="Revenue today" value={`Rs ${stats.totalRevenue}`} foot="Collected from paid visits" tone="ok" />
         <Stat
           label="No-show rate"
           value={stats.noShowRate}
@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
                       style={{ width: `${Math.max((d.revenue / peak) * 100, d.revenue > 0 ? 3 : 0)}%` }}
                     />
                   </div>
-                  <span className="w-16 shrink-0 text-right font-mono text-xs text-ink-2 tnum">${d.revenue}</span>
+                  <span className="w-16 shrink-0 text-right font-mono text-xs text-ink-2 tnum">Rs ${d.revenue}</span>
                 </div>
               ))}
             </div>

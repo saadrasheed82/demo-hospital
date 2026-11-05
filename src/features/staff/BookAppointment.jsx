@@ -128,7 +128,7 @@ export default function BookAppointment() {
             <div className="flex justify-between gap-sm">
               <dt className="text-ink-3">Fee</dt>
               <dd className="font-medium tnum text-ink">
-                ${confirmation.fee} · <span className="text-warn">unpaid</span>
+                Rs ${confirmation.fee} · <span className="text-warn">unpaid</span>
               </dd>
             </div>
           </dl>
@@ -162,7 +162,7 @@ export default function BookAppointment() {
               >
                 <option value="">Choose a doctor</option>
                 {doctors.map(d => (
-                  <option key={d.id} value={d.id}>{d.name} — {d.specialty} (${d.fee})</option>
+                  <option key={d.id} value={d.id}>{d.name} — {d.specialty} (Rs {d.fee})</option>
                 ))}
               </select>
             </Field>
@@ -294,7 +294,7 @@ export default function BookAppointment() {
             <div className="border-t border-rule pt-xs">
               <dt className="label-mono">Fee due</dt>
               <dd className="mt-3xs font-display text-lg font-semibold tnum text-ink">
-                ${doctor?.fee ?? 0}
+                Rs ${doctor?.fee ?? 0}
               </dd>
             </div>
           </dl>

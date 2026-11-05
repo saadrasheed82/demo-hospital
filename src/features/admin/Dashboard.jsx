@@ -115,7 +115,7 @@ export default function AdminDashboard() {
         <Stat label="Today's visits" value={stats.todayAppointments} foot="Appointments booked today" />
         <Stat
           label="Revenue today"
-          value={`$${stats.revenue}`}
+          value={`Rs ${stats.revenue}`}
           foot="Collected from paid visits"
           tone="ok"
         />
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
             </div>
             <div>
               <dt className="label-mono">Revenue</dt>
-              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">${stats.revenue}</dd>
+              <dd className="mt-3xs font-display text-xl font-semibold tnum text-ink">Rs ${stats.revenue}</dd>
             </div>
           </dl>
 

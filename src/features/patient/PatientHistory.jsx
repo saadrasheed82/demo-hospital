@@ -133,7 +133,7 @@ export default function PatientHistory() {
                       <td className="cell-strong">{doc?.name || '—'}</td>
                       <td>{doc?.specialty || '—'}</td>
                       <td className="font-mono text-xs">{apt.date || '—'}</td>
-                      <td className="tnum">${apt.fee ?? 0}</td>
+                      <td className="tnum">Rs {apt.fee ?? 0}</td>
                       <td>
                         <StatusChip tone={tone}>{label}</StatusChip>
                       </td>

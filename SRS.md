@@ -117,9 +117,9 @@ A single, responsive **web application** — React + Tailwind CSS frontend with 
 
 ## 5. Demo Flow (End-to-End Scenario)
 
-1. **Admin sets up hospital** — creates Dr. Ahmed (Cardiology, $50), Dr. Fatima (General Medicine, $20), assigns rooms, sets working hours. Views dashboard.
+1. **Admin sets up hospital** — creates Dr. Ahmed (Cardiology, Rs 500), Dr. Fatima (General Medicine, Rs 400), assigns rooms, sets working hours. Views dashboard.
 
-2. **Patient books and pays** — Patient Sarah searches "Cardiology" → selects Dr. Ahmed → gets token #101 → pays $50 (mock) → receives confirmation.
+2. **Patient books and pays** — Patient Sarah searches "Cardiology" → selects Dr. Ahmed → gets token #101 → pays Rs 500 (PKR) → receives confirmation.
 
 3. **Doctor works queue** — Dr. Ahmed logs in → sees Sarah (token 101) → marks "Arriving in 5 min" → clicks "Next Patient" → adds note "BP checked, normal" → marks Completed.
 

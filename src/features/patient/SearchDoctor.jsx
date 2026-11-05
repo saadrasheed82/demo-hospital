@@ -99,7 +99,7 @@ export default function SearchDoctor() {
                         </div>
                         <p className="mt-3xs text-sm text-ink-3">{doc.specialty}</p>
                       </div>
-                      <span className="chip tnum shrink-0">${doc.fee}</span>
+                      <span className="chip tnum shrink-0">Rs {doc.fee}</span>
                     </div>
 
                     <dl className="mt-md space-y-2xs border-t border-rule pt-sm text-sm">

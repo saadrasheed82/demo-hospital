@@ -99,7 +99,7 @@ export default function DoctorsPage() {
                     <tr key={doc.id}>
                       <td className="cell-strong">{doc.name}</td>
                       <td>{doc.specialty}</td>
-                      <td className="tnum">${doc.fee}</td>
+                      <td className="tnum">Rs {doc.fee}</td>
                       <td>{doc.room || '—'}</td>
                       <td>{doc.hours || '—'}</td>
                       <td>

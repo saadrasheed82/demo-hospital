@@ -272,13 +272,13 @@ export default function UsersPage() {
                     {TEST_SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </Field>
-                <Field label="Fee" htmlFor="user-fee">
+                <Field label="Fee (PKR)" htmlFor="user-fee">
                   <input
                     id="user-fee"
                     type="number"
                     min="0"
                     className="input"
-                    placeholder="e.g. 500"
+                    placeholder="e.g. 500 (PKR)"
                     value={form.fee}
                     onChange={(e) => setForm({ ...form, fee: e.target.value })}
                   />
